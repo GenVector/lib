@@ -570,6 +570,5 @@
 
 2、效率问题
 select *,(select group_concat() from t2 where t2.t1Id = t1.id) from t1 where id in ()
-
 select * from t1 where id in()
 left join t2 on t2.t1Id = t1.id
