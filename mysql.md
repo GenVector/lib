@@ -399,6 +399,7 @@
 			建议将MySQL的SQL_MODE设置为包含ONLY_FULL_GROUP_BY，这时MySQL会对这类查询直接返回一个错误，提醒你需要重写这个查询。
 		2、没有通过ORDER BY子句显式地指定排序列，当查询使用GROUP BY，结果集会自动按照分组的字段进行排序。如果不关心结果集的顺序,而这种默认排序又导致了需要文件排序，则可以使用ORDER BY NULL消除filesort。也可以在GROUP BY子句中直接使用DESC或者ASC关键字，使分组的结果集按需要的方向排序。
 		3、GROUP可以使用INDEX字段
+		4、可以消除掉某些MAX()、MIN()操作
 ###	GROUP BY WITH ROLLUP
 		尽量消除这种用法,将聚合之后的超级聚合放到应用程序中
 
@@ -554,6 +555,8 @@
     22、SELECT * FROM INFORMATION_SCHEMA.INNODB_TRX;查看当前正在执行的事务,方便跟踪阻塞等待以及死锁问题;
     	SHOW PROCESSLIST; 查看当前mysql进程。
     	可以通过 kill PID 杀死正在执行的事务和对应的进程
+	23、INSERT INTO.....ON DUPLICATE KEY UPDATE  insert当产生冲突时候update
+		INSERT INTO `community`.`car`(`id`,`tag`)values ('鲁Q782DM','湖北往返车辆')on duplicate key update  tag='湖北往返车辆';
 
 ##next:
 	1、JOIN USING()的用法
@@ -561,18 +564,12 @@
 	3、LIMIT OFFSET
 	4、Sphinx
 	5、Percona Toolkit
-	6、INSERT INTO.....ON DUPLICATE KEY UPDATE  insert当产生冲突时候update
+	
 
 	select * from t1 where com1 in () and  con2 and con3 in()
-
-1、
-or/in/union 的效率问题
-
 
 2、效率问题
 select *,(select group_concat() from t2 where t2.t1Id = t1.id) from t1 where id in ()
 
 select * from t1 where id in()
 left join t2 on t2.t1Id = t1.id
-
-3、in (so many) 的时间效率问题
