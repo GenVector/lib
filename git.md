@@ -156,4 +156,9 @@ Fetch获取引用线上remote origin引用,只获取,不会切换状态。git fe
 			git push -u origin master -f
 ##	将线上分支与本地仓库分支建立映射
 		git branch --set-upstream-to=origin/branch branchName
+##	.gitignore
+	不起作用的话
+		git rm -r --cached .
+		git add .
+		git commit -m 'update .gitignore'   
 
