@@ -99,8 +99,8 @@ Fetch获取引用线上remote origin引用,只获取,不会切换状态。git fe
 				git status -s
 				?? file1 ?? file2 ?? file3 
 
-			3、可以撤销git rebase操作
-				可以配合git reflog使用,git reflog会列出所有操作,所有操作均可被reset撤销！
+	3、可以撤销git rebase操作
+		可以配合git reflog使用,git reflog会列出所有操作,所有操作均可被reset撤销！
 ####			Git reflog
 					会显示出你所有的操作(不一定是commit,多个操作可能会对应一个commitID,比如来回切换branch, head会在commitID之间移动)
 					$ git reflog head -2
@@ -138,8 +138,28 @@ Fetch获取引用线上remote origin引用,只获取,不会切换状态。git fe
 
 ###	Git show branchName/commitID/head~n比较当前版本和指定版本的不同
 
-###Git diff
+###	Git diff 查看file区别
+
+	//查看暂存区与HEAD指针的所有差别
+	git diff
+
+	//查看file不同版本差别
 	$git diff head~1 head filename
+
+	//查看file当前暂存区与head指针差别
+	git diff head fileName 
+
+###	Gitshow 查看提交信息
+	//查看commitID提交的完整信息
+	git show commitId 
+	
+	//以下两种用法同理
+	git show head
+	git show master
+	
+
+	
+
 	git rev-parse --abbrev-ref HEAD
 	查看head指向的引用----这个命令不一定指向分支,会指向head指针的引用,如果此时你执行checkout命令将head移动到指定commitID,则此时的引用不会面向某个分支。如下图所示
 ###	Git 强制origin覆盖本地
