@@ -211,11 +211,17 @@ static void yield()	// 使当前的线程主动声明放弃CPU的使用权，重
 
 [Java 中的 Monitor 机制](https://segmentfault.com/a/1190000016417017)
 
-操作系统在面对 进程/线程 间同步的时候，提供了的一些同步原语，其中semaphore信号量和mutex互斥量是最重要的同步原语。但直接使用这些原语进行同步必须十分小心，很容易出错，为此，为了更容易地编写出正确的并发程序，**一些编程语言**在mutex和semaphore的基础上，提出了更高层次的同步原语monitor，monitor的重要特点是，同一个时刻，只有一个线程能进入monitor中定义的**临界区**，这使得monitor能够达到互斥的效果。但仅仅有互斥的作用是不够的，无法进入monitor临界区的线程，它们应该被阻塞，并且在必要的时候会被唤醒。
+操作系统在面对 进程/线程 间同步的时候，提供了的一些同步原语，其中semaphore信号量和mutex互斥量是最重要的同步原语。但直接使用这些原语进行同步必须十分小心，很容易出错，
+为此，为了更容易地编写出正确的并发程序，**一些编程语言**在mutex和semaphore的基础上，提出了更高层次的同步原语monitor，monitor的重要特点是，
+同一个时刻，只有一个线程能进入monitor中定义的**临界区**，这使得monitor能够达到互斥的效果。但仅仅有互斥的作用是不够的，无法进入monitor临界区的线程，
+它们应该被阻塞，并且在必要的时候会被唤醒。
 
-使用monitor机制的目的主要是为了互斥进入临界区，为了做到能够阻塞无法进入临界区的线程，还需要一个monitor object来协助，这个monitor object内部会有相应的数据结构，例如列表，来保存被阻塞的线程；同时由 monitor机制本质上是基于mutex这种基本原语的，所以monitor object 还必须维护一个基于mutex的锁。
+使用monitor机制的目的主要是为了互斥进入临界区，为了做到能够阻塞无法进入临界区的线程，还需要一个monitor object来协助，这个monitor object内部会有相应的数据结构，
+例如列表，来保存被阻塞的线程；同时由 monitor机制本质上是基于mutex这种基本原语的，所以monitor object 还必须维护一个基于mutex的锁。
 
-此外，为了在适当的时候能够阻塞和唤醒 进程/线程，还需要引入一个条件变量，这个条件变量用来决定什么时候是“适当的时候”，这个条件可以来自程序代码的逻辑，也可以是在monitor object的内部，总而言之，程序员对条件变量的定义有很大的自主性。不过，由于monitor object内部采用了数据结构来保存被阻塞的队列，因此它也必须对外提供两个 API 来让线程进入阻塞状态以及之后被唤醒，分别是wait和notify。
+此外，为了在适当的时候能够阻塞和唤醒 进程/线程，还需要引入一个条件变量，这个条件变量用来决定什么时候是“适当的时候”，这个条件可以来自程序代码的逻辑，
+也可以是在monitor object的内部，总而言之，程序员对条件变量的定义有很大的自主性。不过，由于monitor object内部采用了数据结构来保存被阻塞的队列，
+因此它也必须对外提供两个 API 来让线程进入阻塞状态以及之后被唤醒，分别是wait和notify。
 
 在java中，每一个object都有一个对应的内部锁，即一个monitor，object提供了wait、notify、notifyAll方法、java提供了`synchronized`关键字来操作这个锁。
 
@@ -225,17 +231,28 @@ static void yield()	// 使当前的线程主动声明放弃CPU的使用权，重
 
 [知乎：锁池和等待池相关提问](https://www.zhihu.com/question/64725629)
 
-对于每一个monitor，java都会为其维护一个`Entry Set`(入口集，也有翻译为锁池的)和`Wait Set`(等待集，也有翻译为等待池)，其中，EntrySet用于保存等待获取该monitor对应的内部锁的所有线程，而其WaitSet则用于存储执行了在该对象上调用了`wait()`、`wait(long)`的线程。
+对于每一个monitor，java都会为其维护一个`Entry Set`(入口集，也有翻译为锁池的)和`Wait Set`(等待集，也有翻译为等待池)，其中，EntrySet用于保存等待获取该monitor对应的内部锁的所有线程，
+而其WaitSet则用于存储执行了在该对象上调用了`wait()`、`wait(long)`的线程。
 
-假设objectX是任意一个对象，moniterX为这个对象对应的内部锁，假设有线程A、B、C同时申请monitorX，胜出的线程是B，那么AC线程会被暂停(即其生命周期被调整为BLOCKED)，同时AC被存入objectX对应的Entry Set中，当B释放monitorX时，JVM会决定唤醒EntrySet中的任意一个线程，将其生命周期状态调整为RUNABLE，这个被唤醒的线程会与其他活跃线程(不在EntrySet中，且状态为RUNABLE的线程)再次抢占monitorX，如果成功申请到monitorX，该线程从entrySet中移出，否则被唤醒的线程仍然停留在EntrySet中，并再次进入BLOCKED状态，等待下次有线程放弃锁。
+假设objectX是任意一个对象，moniterX为这个对象对应的内部锁，假设有线程A、B、C同时申请monitorX，胜出的线程是B，那么AC线程会被暂停(即其生命周期被调整为BLOCKED)，
+同时AC被存入objectX对应的Entry Set中，当B释放monitorX时，JVM会决定唤醒EntrySet中的任意一个线程，将其生命周期状态调整为RUNABLE，
+这个被唤醒的线程会与其他活跃线程(不在EntrySet中，且状态为RUNABLE的线程)再次抢占monitorX，如果成功申请到monitorX，该线程从entrySet中移出，
+否则被唤醒的线程仍然停留在EntrySet中，并再次进入BLOCKED状态，等待下次有线程放弃锁。
 
-如果有线程在获得锁的情况下，调用了wait()方法，则他将会主动放弃锁，同时被暂停（线程的生命周期状态被设置为WAITING或者TIMED_WAITING），并进入monitorX的WaitSet。此时，线程就被称为objectX的等待线程。当其他线程在objectX上调用了`notify()`或者`notifyAll()`后，WaitSet中的任意一个(`notify()`)或所有(`notifyAll()`)等待线程会被移入EntrySet，即线程生命周期调整为RUNABLE，这些被唤醒的线程会与EntrySet中被唤醒的线程以及其他活跃线程共同抢夺monitorX，如果其中一个被唤醒的等待线程成功申请到锁，那么该线程会从EntrySet中移除，否则其会继续停留在EntrySet中，并再次被暂停。
+如果有线程在获得锁的情况下，调用了wait()方法，则他将会主动放弃锁，同时被暂停（线程的生命周期状态被设置为WAITING或者TIMED_WAITING），
+并进入monitorX的WaitSet。此时，线程就被称为objectX的等待线程。当其他线程在objectX上调用了`notify()`或者`notifyAll()`后，
+WaitSet中的任意一个(`notify()`)或所有(`notifyAll()`)等待线程会被移入EntrySet，即线程生命周期调整为RUNABLE，
+这些被唤醒的线程会与EntrySet中被唤醒的线程以及其他活跃线程共同抢夺monitorX，如果其中一个被唤醒的等待线程成功申请到锁，
+那么该线程会从EntrySet中移除，否则其会继续停留在EntrySet中，并再次被暂停。
 
 在一些情况下，使用`notify()`可能导致死锁，死锁的原因可以参见：[从一个死锁分析wait，notify，notifyAll](https://www.jianshu.com/p/45626f4e0fc1)
 
-简版的解释是：假如我们用一个List作为对象作为锁，那么假如有一个生产者P向该List中添加数据，两个消费者C1，C2从List中取出数据，在某一时刻，P和C2都在等待池中，消费者C1消费完毕后，list为空，然后调用了list的notify，但C2被调度，此时C2因为条件不满足，获得锁之后会立即放弃锁，也进入等待池，此时三个线程全都在等待池，等待不可能到来的资源，就形成了死锁。
+简版的解释是：假如我们用一个List作为对象作为锁，那么假如有一个生产者P向该List中添加数据，两个消费者C1，C2从List中取出数据，在某一时刻，P和C2都在等待池中，
+消费者C1消费完毕后，list为空，然后调用了list的notify，但C2被调度，此时C2因为条件不满足，获得锁之后会立即放弃锁，也进入等待池，此时三个线程全都在等待池，
+等待不可能到来的资源，就形成了死锁。
 
-为了防止这类死锁的发生，一个是可以将notify改为notifyAll，一个是可以在调用wait时传入合适的超时时间，这样可以保证在超时后，线程仍然会进入锁池。**effective java**中推荐的标准写法如下：
+为了防止这类死锁的发生，一个是可以将notify改为notifyAll，一个是可以在调用wait时传入合适的超时时间，这样可以保证在超时后，线程仍然会进入锁池。
+**effective java**中推荐的标准写法如下：
 
 ```java
 synchronized (obj) {
@@ -254,15 +271,21 @@ synchronized (obj) {
 
 这里有个小疑问，在知乎的上述回答中，该大佬称
 
-> 从java虚拟机性能的角度来说，java虚拟机没有必要在notifyAll之后将WaitSet中的线程移入EntrySet，因为从一个队列移动到另一个队列有开销。其次，notifyAll后WaitSet中多个线程会被唤醒，但在极端情况下这些线程没有一个能获得锁，或者获得了锁但也因为其他资源不满足而无法运行，那么这个时候，这些等待线程仍然需要调用wait()进入等待状态，此时将他移出WaitSet后需要马上再移回WaitSet，这就是一种浪费。
+> 从java虚拟机性能的角度来说，java虚拟机没有必要在notifyAll之后将WaitSet中的线程移入EntrySet，因为从一个队列移动到另一个队列有开销。
+其次，notifyAll后WaitSet中多个线程会被唤醒，但在极端情况下这些线程没有一个能获得锁，或者获得了锁但也因为其他资源不满足而无法运行，
+那么这个时候，这些等待线程仍然需要调用wait()进入等待状态，此时将他移出WaitSet后需要马上再移回WaitSet，这就是一种浪费。
 
 所以，该大佬表示：
 
-> 当其他线程在objectX上调用了`notify()`或者`notifyAll()`后，WaitSet中的任意一个(`notify()`)或所有(`notifyAll()`)等待线程会被唤醒，即线程生命周期调整为RUNABLE，这些被唤醒的线程会与EntrySet中被唤醒的线程以及其他活跃线程共同抢夺monitorX，如果其中一个被唤醒的等待线程成功申请到锁，那么该线程会从**WaitSet**中移除，否则其会继续停留在**WaitSet**中，并再次被暂停。
+> 当其他线程在objectX上调用了`notify()`或者`notifyAll()`后，WaitSet中的任意一个(`notify()`)或所有(`notifyAll()`)等待线程会被唤醒，即线程生命周期调整为RUNABLE，
+这些被唤醒的线程会与EntrySet中被唤醒的线程以及其他活跃线程共同抢夺monitorX，如果其中一个被唤醒的等待线程成功申请到锁，那么该线程会从**WaitSet**中移除，
+否则其会继续停留在**WaitSet**中，并再次被暂停。
 
 但在这个理论中，我没搞清楚一点，即这样难道不会造成死锁？以上面notify()导致死锁的案例为例：
 
-假如此时P和C1在等待集，C2获取锁后处理完毕，进行notifyAll()，此时P和C1、C2共同竞争锁，结果C2再次获胜，此时按大佬的说法，P和C1仍然在等待集中，但此时C2因为队列为空无法处理，调用wait()进入等待集。但按照大佬的说法，JVM会唤醒EntrySet中的线程，但不会唤醒WaitSet中的线程，所以此时所有的线程都在WaitSet里，没有任何线程可以唤醒他们了。除非，当P和C1在等待集中被唤醒后因为抢夺锁失败，重新进入BLOCKED状态，而JVM在唤醒时也不是只唤醒WaitSet中的线程，而是唤醒所有在BLOCKED状态的线程，这样才可以避免死锁。
+假如此时P和C1在等待集，C2获取锁后处理完毕，进行notifyAll()，此时P和C1、C2共同竞争锁，结果C2再次获胜，此时按大佬的说法，P和C1仍然在等待集中，但此时C2因为队列为空无法处理，
+调用wait()进入等待集。但按照大佬的说法，JVM会唤醒EntrySet中的线程，但不会唤醒WaitSet中的线程，所以此时所有的线程都在WaitSet里，没有任何线程可以唤醒他们了。
+除非，当P和C1在等待集中被唤醒后因为抢夺锁失败，重新进入BLOCKED状态，而JVM在唤醒时也不是只唤醒WaitSet中的线程，而是唤醒所有在BLOCKED状态的线程，这样才可以避免死锁。
 
 但这与大佬的说法不符，而且每次都要扫描WaitSet和EntrySet中的所有线程，那么还要这两个Set干嘛？每次全部扫描不就OK了。所以这个问题还是比较没搞清楚，在这里权做记录。
 
@@ -293,9 +316,13 @@ public class Monitor {
 }
 ```
 
-可以发现，上述的 synchronized 关键字在使用的时候，往往需要指定一个对象与之关联，例如 synchronized(this)，或者 synchronized(ANOTHER_LOCK)，synchronized 如果修饰的是实例方法，那么其关联的对象实际上是this，如果修饰的是类方法，那么其关联的对象是this.class。总之，synchronzied需要关联一个对象，而这个对象就是monitor object。
+可以发现，上述的 synchronized 关键字在使用的时候，往往需要指定一个对象与之关联，例如 synchronized(this)，或者 synchronized(ANOTHER_LOCK)，synchronized 如果修饰的是实例方法，
+那么其关联的对象实际上是this，如果修饰的是类方法，那么其关联的对象是this.class。总之，synchronzied需要关联一个对象，而这个对象就是monitor object。
 
-只有在Entry Set中的线程才会去竞争锁，而哪个线程获得锁则由系统的调度程序决定。当调用某个object的wait方法时，当前线程必须已经获得了锁(所以要求wait必须在synchronized块中调用)，而调用该方法将导致当前线程直接放弃锁，进入Wait Set。进入Wait Set的锁将永远不会主动**竞争**锁，除非其他线程在该Object上调用了notify或者notifyAll方法，这两个方法也要求当前线程必须获得锁，因此也必须在synchronized块中调用，如果调用的是notifyAll方法，那么所有在该object的Wait Set中的线程都会进入Entry Set，重新竞争锁，而notify方法会则随机将一个线程从wait set移动到entry set。
+只有在Entry Set中的线程才会去竞争锁，而哪个线程获得锁则由系统的调度程序决定。当调用某个object的wait方法时，当前线程必须已经获得了锁(所以要求wait必须在synchronized块中调用)，
+而调用该方法将导致当前线程直接放弃锁，进入Wait Set。进入Wait Set的锁将永远不会主动**竞争**锁，除非其他线程在该Object上调用了notify或者notifyAll方法，
+这两个方法也要求当前线程必须获得锁，因此也必须在synchronized块中调用，如果调用的是notifyAll方法，那么所有在该object的Wait Set中的线程都会进入Entry Set，
+重新竞争锁，而notify方法会则随机将一个线程从wait set移动到entry set。
 
 #### sleep与wait
 
@@ -318,18 +345,22 @@ wait存在的原因是，只有获得锁才能判断资源是否就位(以防刚
 + 一个锁只能等待一个条件。在并发多的情况下，多个条件可以让代码的可读性更好，也更容易实现一些。
 + 无法控制获得锁的顺序，在一些倒霉的情况下，某些线程可能总是得不到调度。而接下来要介绍的Lock就会提供公平机制(会较大降低性能)，优先选择长期未得到调度的线程。
 + synchronized是悲观锁，造成的性能损失较大。而之后要介绍的Lock是乐观锁，采用CAS(compare and swap来)加锁，性能要好得多。
-+ 在尝试获取锁时阻塞且无法中断。意思是说，假如一个线程尝试进入synchronized锁定的临界区，那他就必须一直等待，无法退出，如果别人永远不释放锁，那这个线程就永远等下去。接下来要介绍的Lock就要高端一些，有`tryLock()`方法，可以直接返回，也有方法可以在等待一段时间后返回，此时当前线程将目前持有锁的线程中断，或者决定做其他工作。
++ 在尝试获取锁时阻塞且无法中断。意思是说，假如一个线程尝试进入synchronized锁定的临界区，那他就必须一直等待，无法退出，如果别人永远不释放锁，那这个线程就永远等下去。
+接下来要介绍的Lock就要高端一些，有`tryLock()`方法，可以直接返回，也有方法可以在等待一段时间后返回，此时当前线程将目前持有锁的线程中断，或者决定做其他工作。
 + 缺少读写锁的支持。当多线程同时读一个文件时，读操作理应相互不阻塞，而写操作本身、读写操作才需要阻塞，但synchronized显然是一刀切，读操作也相互阻塞，这不合理。
 + 无法得知锁当前的状态，即是否被锁上，有多少线程在等待锁等。
-+ 在Lock的注释里，还提到，synchronized必须按顺序加锁，逆序解锁，并且必须在同一个作用域里释放，这使得一些技术难以施展，比如说一些算法可能需要chain lock，即获得nodeA的锁，然后获得nodeB，然后释放nodeA，然后获得nodeC的锁，这样加锁顺序和释放顺序就不是严格逆序，而且也不一定在一个作用域，用synchronized的话就很难应用。
++ 在Lock的注释里，还提到，synchronized必须按顺序加锁，逆序解锁，并且必须在同一个作用域里释放，这使得一些技术难以施展，比如说一些算法可能需要chain lock，
+即获得nodeA的锁，然后获得nodeB，然后释放nodeA，然后获得nodeC的锁，这样加锁顺序和释放顺序就不是严格逆序，而且也不一定在一个作用域，用synchronized的话就很难应用。
 
 可以说，synchronized是在刚开始，JDK还不够成熟时诞生的通用解决方案，任何对象都可以作为它的监视器。任何对象都可以作为monitor这种设计是否合理还有待考证，而它确实存在的这些不足，也促进了JDK1.5推出更高级的锁机制。即`java.util.concurrent.locks`包里的一些类。
 
 ##### Lock接口简介
 
-自从JDK1.5依赖，java新增了标准包：`java.util.concurrent.locks`，除了推出了比synchronized语义更加灵活的Lock and Condition以外，还推出了很多高级线程同步工具。其实根据《Java核心技术》一书的建议，普通用户：
+自从JDK1.5依赖，java新增了标准包：`java.util.concurrent.locks`，除了推出了比synchronized语义更加灵活的Lock and Condition以外，还推出了很多高级线程同步工具。
+其实根据《Java核心技术》一书的建议，普通用户：
 
-> 1. 最好既不使用Lock/Condition，也不使用synchronized关键字，因为这些都是比较贴近底层的同步原语，用的不好非常容易出错。concurrent包带来了很多同步工具，他们都隐藏了这样的加锁与加锁行为，很大程度上降低了程序员的心智负担。在可行的情况下，应当使用更高级的同步工具。
+> 1. 最好既不使用Lock/Condition，也不使用synchronized关键字，因为这些都是比较贴近底层的同步原语，用的不好非常容易出错。concurrent包带来了很多同步工具，
+他们都隐藏了这样的加锁与加锁行为，很大程度上降低了程序员的心智负担。在可行的情况下，应当使用更高级的同步工具。
 >
 > 2. 如果synchronized已经够用，那就尽量使用synchronized，因为这需要更少的代码量，减少了出错的几率。
 > 3. 如果特别需要Lock/Condition带来的新特性，才使用Lock/Condition。
@@ -340,8 +371,11 @@ wait存在的原因是，只有获得锁才能判断资源是否就位(以防刚
 
 > 1. 介绍了一下什么是锁。在绝大多数情况下，一个锁只能被一个线程获取，即确保同一时间只有一个线程能访问共享资源，但例如读写锁这样的锁，就允许并发访问同一个资源。
 > 2. synchronized关键字解锁时只能在同一作用域，且解锁顺序必须与加锁顺序严格逆序。这限制了一些高端技巧的应用。
-> 3. Great power comes with Great responsibility。在Lock带来更大灵活性的同时，也带来了释放锁的额外要求，要求程序员一定要记得在finally块中解锁。如果加锁和解锁不在同一个作用域，就需要加倍小心。
-> 4. Lock提供了比synchronized更多的特性。包括请求锁时不阻塞：`trylock()`，无法获得锁时立刻返回false；包括因等待锁而阻塞时，获得锁的过程可以打断，`lockInterruptibly()`，如果在调用这个方法时，或者在这个方法阻塞的任意时刻，线程的中断位被置位，则该方法立即抛出`InterruptedException`；包括请求锁时可以设置最大等待时间：`tryLock(long,TimeUnit)`，在等待超时时会返回false。
+> 3. Great power comes with Great responsibility。在Lock带来更大灵活性的同时，也带来了释放锁的额外要求，要求程序员一定要记得在finally块中解锁。
+如果加锁和解锁不在同一个作用域，就需要加倍小心。
+> 4. Lock提供了比synchronized更多的特性。包括请求锁时不阻塞：`trylock()`，无法获得锁时立刻返回false；包括因等待锁而阻塞时，获得锁的过程可以打断，
+`lockInterruptibly()`，如果在调用这个方法时，或者在这个方法阻塞的任意时刻，线程的中断位被置位，则该方法立即抛出`InterruptedException`；
+包括请求锁时可以设置最大等待时间：`tryLock(long,TimeUnit)`，在等待超时时会返回false。
 >
 > 5. 目前与Lock紧密相关的几个类或接口有：`ReentrantLock` `Condition` `ReadWriteLock`
 
