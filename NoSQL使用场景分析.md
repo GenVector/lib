@@ -73,3 +73,15 @@
 常量池在堆中
 程序计数器和字节码解释器有关,标记流程化字节码指令:判断、循环等
 Class对象在元空间中
+
+synchronized作用域
+Redis 持久化 分布式锁 哨兵
+分布式事务场景方案
+
+归并排序和分治算法
+任务调度线程池
+翻转二分
+判断树完全二叉树
+
+
+parallel scavenge initializer Multipart Authentication Concurrent Reentrant
