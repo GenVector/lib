@@ -247,4 +247,30 @@ XSS：不需要登录。利用合法操作篡改网站内容
 您好,我叫郭诗雨。2017年毕业于西北工业大学信息管理与信息系统专业。毕业后前后就职于浪潮通用软件有限公司和北京睿企信息科技有限公司。
 主要技术栈有Java语言、spring相关框架、MySQL、SQL SERVER等主流关系型数据库和MongoDB、HBASE、Redis一定非关系型数据库使用;
 
+集群环境下，Session管理的几种手段
+
+Session复制
+缺点：集群服务器间需要大量的通信进行Session复制，占用服务器和网络的大量资源。
+由于所有用户的Session信息在每台服务器上都有备份，在大量用户访问的情况下，会出现服务器内存不够Session使用的情况。
+
+Session绑定
+在整个会话期间，用户所有的请求都在同一个服务器上处理，即Session绑定在某台特定服务器上，保证Session总能在这台服务器上获取。
+
+利用Cookie记录Session
+缺点:受Cookie大小限制，如果用户关闭Cookie，访问就不正常了。
+这个大部分网站还是使用这种方式的。
+
+Session服务器
+独立部署Session服务器统一管理Session，应用服务器每次读写Session时，都访问Session服务器。
+
+socket
+服务器端：
+– 申请一个socket (socketWatch)用来监听的
+– 绑定到一个IP地址和一个端口上
+– 开启侦听，等待接授客户端的连接
+– 当有连接时创建一个用于和连接进来的客户端进行通信的socket(socketConnection)
+– 即续监听,等侍下一个客户的连接
+客户端：
+– 申请一个socket(socketClient)
+– 连接服务器（指明IP地址和端口号）
 	
