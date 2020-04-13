@@ -1,0 +1,53 @@
+kafka支持zookeeper负责均衡
+kafka采用zookeeper对集群中的broker、consumer进行管理，可以注册topic到zookeeper上；通过zookeeper的协调机制，producer保存对应topic的broker信息，可以随机或者轮询发送到broker上；并且producer可以基于语义指定分片，消息发送到broker的某分片上
+	Producer可以通过zookeeper获得topic的broker信息，从而得知需要往哪写数据
+	Consumer也从zookeeper上获得该信息，从而得知要监听哪个partition
+可能出现的问题
+Producer:批量形式下，可能会丢数据。 非批量形式下， 1. 使用同步模式，可能会有重复数据。 2. 异步模式，则可能会丢数据。
+Consumer:批量形式下，可能会丢数据。非批量形式下，可能会重复处理数据。（ZK写offset是异步的）
+丢包问题:启用retry机制
+去重:1、关系型数据库唯一性约束/Redis缓存校验
+2、保证方法的幂等性(状态校验0/1)
+
+
+
+与传统MQ比较,吞吐量较高。内部采用消息的批量处理，zero-copy机制，数据的存储和获取是本地磁盘顺序批量操作，具有O(1)的复杂度，消息处理的效率很高
+持久化
+
+
+基本参数
+Producer 生产者
+Consumer 消费者
+这两个与传统的MQ一样，不解释了
+
+Topic 消息订阅主题。在MQ中称之为channel
+
+Broker
+	集群中的Kafka Server，用来提供Partition服务
+
+Partition 
+	那么Kafka中Topic就是一个N车道的高速公路。每个车道都可以行车，而每个车道就是Partition。
+
+一个Topic中可以有一个或多个partition。
+一个Broker上可以跑一个或多个Partition。集群中尽量保证partition的均匀分布，例如定义了一个有3个partition的topic，而只有两个broker，那么一个broker上跑两个partition，而另一个是1个。但是如果有3个broker，必然是3个broker上各跑一个partition。
+Partition中严格按照消息进入的顺序排序
+一个从Producer发送来的消息，只会进入Topic的某一个Partition（除非特殊实现Producer要求消息进入所有Partition）
+Consumer可以自己决定从哪个Partition读取数据
+
+Offset
+单个Partition中的消息的顺序ID，例如第一个进入的Offset为0，第二个为1，以此类推。传统的MQ，Offset是由MQ自己维护，而kafka是由client维护
+
+Replica
+Kafka从0.8版本开始，支持消息的HA，通过消息复制的方式。在创建时，我们可以指定一个topic有几个partition，以及每个partition有几个复制。复制的过程有同步和异步两种，根据性能需要选取。 正常情况下，写和读都是访问leader，只有当leader挂掉或者手动要求重新选举，kafka会从几个复制中选举新的leader。
+
+Kafka会统计replica与leader的同步情况。当一个replica与leader数据相差不大，会被认为是一个"in-sync" replica。只有"in-sync" replica才有资格参与重新选举。
+
+ConsumerGroup
+一个或多个Consumer构成一个ConsumerGroup，一个消息应该只能被同一个ConsumerGroup中的一个Consumer消化掉，但是可以同时发送到不同ConsumerGroup。
+
+通常的做法，一个Consumer去对应一个Partition。
+
+传统MQ中有queuing（消息）和publish-subscribe（订阅）模式，Kafka中也支持：
+
+当所有Consumer具有相同的ConsumerGroup时，该ConsumerGroup中只有一个Consumer能收到消息，就是 queuing 模式
+当所有Consumer具有不同的ConsumerGroup时，每个ConsumerGroup会收到相同的消息，就是 publish-subscribe 模式
