@@ -1,38 +1,33 @@
-#	线程的实现方式
-##	根据操作系统内核是否对线程可感知，可以把线程分为内核线程和用户线程
-
+#	线程
 ##	三种线程实现方式
+	根据操作系统内核是否对线程可感知，可以把线程分为内核线程和用户线程
 	1>使用内核线程实现 Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1
 	2>使用用户线程实现
 	3>使用用户线程和轻量级进程混合实现
 
-##	线程内存交换空间
-##	缓冲区 内存交换
-
-#	线程分配方式
+##	线程分配方式
 	1>	抢占式 目前Linux、windows等操作系统对线程的分配方式为抢占式
 	2>	调度式
 
 #	IO
-##	IO原理
-##	IO read、write
+##	IO原理 read、write
 	上层程序的read write 方法本质上是内存在缓冲区的复制。而真正内核缓冲区与物理磁盘之间的内存交互上层应用程序并不感知,也不关心。
 	内存read:物理磁盘->内核缓冲区->程序缓冲区
 	内存write:程序缓冲区->内核缓冲区->物理磁盘
 	所以同步等待IO事件的完成是一件很消耗的操作。在此背景下,探索新的IO才有存在的意义
 
 ##	IO读写模型
-	1>BIO 同步阻塞IO
-	2>NIO 同步非阻塞IO
+###	1>BIO 同步阻塞IO
+###	2>NIO 同步非阻塞IO
 		每次发起的IO系统调用，在内核等待数据过程中可以立即返回。用户线程不会阻塞，实时性较好。
 		不断地轮询内核，这将占用大量的CPU时间，效率低下
 		在高并发应用场景下，同步非阻塞IO也是不可用的。一般Web服务器不使用这种IO模型。这种IO模型一般很少直接使用。在Java的实际开发中，也不会涉及这种IO模型
-	3>IO Multiplexing IO多路复用 
+###	3>IO Multiplexing IO多路复用 
 		注册IO事件
 		注册IO处理事件
 		注册定时轮询任务
 		定时轮询IO事件,并且处理就绪的IO事件
-	4>AIO 异步IO （目前只有Windows IIS实现了AIO）
+###	4>AIO 异步IO （目前只有Windows IIS实现了AIO）
 
 #	Java NIO 
 ##	使用IO多路复用模型实现
@@ -195,15 +190,15 @@
 #####	channelReadComplete
 
 
-##channelRead0重写问题
+##	channelRead0重写问题
 
-##设置cookie
+##	设置cookie
 	res.headers().set(HttpHeaderNames.SET_COOKIE, new DefaultCookie("IP", "123456"));
-##获取cookie
+##	获取cookie
 	HttpRequest request = (HttpRequest) e.getMessage();
 	String value = request.getHeader("Cookie");
 	System.out.println(value);
-##netty没有实现session 需要自己实现
+##	netty没有实现session 需要自己实现
 ##  跨域问题解决
     //允许携带的header中属性 支持 * 通配符 ajax cookie跨域访问中 * 无法支持 需要显示指定可以携带哪些header信息
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type,X-Requested-With");
@@ -212,7 +207,7 @@
     //支持的跨域名访问 ajax cookie跨域访问中 * 无法支持 ORIGIN 属性只能设置 一个 需要服务端手动配置 白名单匹配
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
 
-##ChannelPromise是一种可写的特殊 ChannelFuture 继承自ChannelFuture
+##	ChannelPromise是一种可写的特殊 ChannelFuture 继承自ChannelFuture
     ChannelPromise setSuccess(Void var1);
     ChannelPromise setSuccess();
     boolean trySuccess();
