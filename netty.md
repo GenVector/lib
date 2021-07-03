@@ -123,20 +123,19 @@
 			workerLoopGroup.shutdownGracefully() bossLoopGroup.shutdownGracefully()
 
 
-
 ##	channel 负责处理网络连接
 	每一个channel都代表一个网络连接,由它负责同对端进行网络通信，可以写入数据到对端，也可以从对端读取数据。
 	Netty中不直接使用Java NIO的Channel通道组件，对Channel通道组件进行了自己的封装。
-		NioSocketChannel：异步非阻塞TCP Socket传输通道。客户端使用
-		NioServerSocketChannel：异步非阻塞TCP Socket服务器端监听通道。
-		NioDatagramChannel：异步非阻塞的UDP传输通道。
-		NioSctpChannel：异步非阻塞Sctp传输通道。
-		NioSctpServerChannel：异步非阻塞Sctp服务器端监听通道。
-		OioSocketChannel：同步阻塞式TCP Socket传输通道。
-		OioServerSocketChannel：同步阻塞式TCP Socket服务器端监听通道。
-		OioDatagramChannel：同步阻塞式UDP传输通道。
-		OioSctpChannel：同步阻塞式Sctp传输通道。
-		OioSctpServerChannel：同步阻塞式Sctp服务器端监听通道。
+		1 、NioSocketChannel：异步非阻塞TCP Socket传输通道。客户端使用
+		2 、NioServerSocketChannel：异步非阻塞TCP Socket服务器端监听通道。
+		3 、NioDatagramChannel：异步非阻塞的UDP传输通道。
+		4 、NioSctpChannel：异步非阻塞Sctp传输通道。
+		5 、NioSctpServerChannel：异步非阻塞Sctp服务器端监听通道。
+		6 、OioSocketChannel：同步阻塞式TCP Socket传输通道。
+		7 、OioServerSocketChannel：同步阻塞式TCP Socket服务器端监听通道。
+		8 、OioDatagramChannel：同步阻塞式UDP传输通道。
+		9 、OioSctpChannel：同步阻塞式Sctp传输通道。
+		10、OioSctpServerChannel：同步阻塞式Sctp服务器端监听通道。
 ###	Channel接口为网络连接主接口 网络层实现了http、webSocket等多种处理机制
 		1、当前网络连接的通道的状态(例如是否打开？是否已连接？)
 		2、网络连接的配置参数 (例如接收缓冲区大小)
@@ -155,32 +154,49 @@
 	SocketChannel 连接 server 使用
 ###	bind()
 	ServerSocketChannel 绑定端口
+	服务端使用
 ###	close()
-	channel关闭事件。
+	channel关闭事件。关闭通道连接
 ###	read()
+	读取通道数据,并且启动入站处理handler,启动pipeline
+	调用ChannelFuture异步任务的sync( )方法来阻塞当前线程，一直等到通道关闭的异步任务执行完毕
+
 ###	write()
+	启程将数据写入到通道中。返回值为出站的异步任务Future。
+	write()为异步任务,并不能立即写出到对端,仅仅是将数据放入通道缓冲区
 ###	flush()
+	将缓冲区数据立即写出到对端
+###	writeAndFlush()
+	将数据写入到通道并立即写出
 
 ###	channel close disconnect deregister 方法对比
 	close销毁实例
 	disconnect只能销毁连接成功的实例
 	deregister
 
+###	EmbeddedChannel 测试类
 
 ##	Handler
-###	业务处理逻辑
-####	SimpleChannelInboundHandler类
+	在Reactor反应器经典模型中，反应器查询到IO事件后，分发到Handler业务处理器，由Handler完成IO操作和业务处理。
+	整个的IO处理操作环节包括:
+###	入站ChannelInboundHandler:自底向上 从通道读数据包、数据包解码、业务处理
+####	业务处理逻辑	SimpleChannelInboundHandler类
 #####	channelRead0
 #####	channelActive
 #####	channelInactive
 #####	channelReadComplete
+###出站ChannelOutboundHandler:自顶向下 目标数据编码、把数据包写到通道，然后由通道发送到对端
+
+
 
 ###	channelRead0重写问题
 
 ## 流水线 pipeline 
 	pipeline 将handler 整合在一起 用于处理channel事件 
 	在pipeline中 handler 对IO的处理有顺序定义 实际设计为一个双向链表
-
+	工作流程 
+		入站 解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) --> ProtoBuf/Json
+		出站
 ##	Future
 	继承并且扩展了Java Future对象
 	netty中Future添加了addListener、removeListener方式 支持添加对结果监听的处理
@@ -196,9 +212,9 @@
 	3、通过 getCause 方法来获取已完成的当前操作失败的原因;
 	4、通过 isCancelled 方法来判断已完成的当前操作是否被取消;
 	5、通过 addListener 方法来注册监听器,当操作已完成(isDone 方法返回完成),将会通知指定的监听器;如果 Future 对象已完成(无论是否成功),则理解通知指定的监听器。可设置超时处理逻辑
-	6、通过sync等操作阻塞和调度NIO(高风险慎用,精通线程调度大神忽略)
+	6、通过sync等操作阻塞和调度NIO(高风险慎用,精通线程调度大神自动忽略)
 
-###	ChannelPromise是一种可写的特殊 ChannelFuture 继承自ChannelFuture
+###	ChannelPromise是一种可写的特殊 ChannelFuture 继承自Future
     ChannelPromise setSuccess(Void var1);
     ChannelPromise setSuccess();
     boolean trySuccess();
@@ -211,6 +227,29 @@
 ##	ChannelHandlerContext
 	保存 Channel 相关的所有上下文信息,同时关联一个 ChannelHandler 对象。
 
+##	ByteBuf二进制流
+
+##	Decoder与Encoder解码器
+	将TCP二进制传输 转化为Java Polo。这一层定义的是通道channel read/write 的数据编码格式。
+	例如在网络编程中我们经常用到的HttpServerCodec
+
+##	json与protobuf编解码
+	涉及对象的序列化/反序列化的问题，例如一个对象从客户端通过TCP方式发送到服务器端；因为TCP协议（UDP等这种低层协议）只能发送字节流
+	所以需要应用层将Java POJO对象序列化成字节流，数据接收端再反序列化成Java POJO对象。
+	注意与HttpServerCodec编解码定义的区别。 这里定义的是httpRequest数据包的编码格式。
+###	httpRequest content->json/protobuf
+	tcp传输层传输数据为二进制包,需要将二进制包解码成Java Polo。
+
+	在这里简单说个理解。netty不是个网络框架,是一个IO框架。它不仅可以处理TCP连接,更可以通过自定义编解码协议,处理和传输层相关的IO事件。
+###	半包、粘包问题
+
+#netty WebSocketFrame
+##BinaryWebSocketFrame 发送二进制消息
+##CloseWebSocketFrame 关闭
+##ContinuationWebSocketFrame
+##PingWebSocketFrame ping
+##PongWebSocketFrame pong
+##TextWebSocketFrame 发送文本消息
 
 ##	设置cookie
 	res.headers().set(HttpHeaderNames.SET_COOKIE, new DefaultCookie("IP", "123456"));
