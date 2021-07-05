@@ -23,6 +23,9 @@
 ###		修改用户名和邮箱地址
 			$git config --global user.name  "name"
 			$git config --global user.email  "…com"
+
+###		自动记住密码 git config --global credential.helper store
+
 ###		Git remote
 			Git init 初始化本地仓库
 ####		查看所有remote
