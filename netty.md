@@ -126,22 +126,22 @@
 ##	channel 负责处理网络连接
 	每一个channel都代表一个网络连接,由它负责同对端进行网络通信，可以写入数据到对端，也可以从对端读取数据。
 	Netty中不直接使用Java NIO的Channel通道组件，对Channel通道组件进行了自己的封装。
-		1 、NioSocketChannel：异步非阻塞TCP Socket传输通道。客户端使用
-		2 、NioServerSocketChannel：异步非阻塞TCP Socket服务器端监听通道。
-		3 、NioDatagramChannel：异步非阻塞的UDP传输通道。
-		4 、NioSctpChannel：异步非阻塞Sctp传输通道。
-		5 、NioSctpServerChannel：异步非阻塞Sctp服务器端监听通道。
-		6 、OioSocketChannel：同步阻塞式TCP Socket传输通道。
-		7 、OioServerSocketChannel：同步阻塞式TCP Socket服务器端监听通道。
-		8 、OioDatagramChannel：同步阻塞式UDP传输通道。
-		9 、OioSctpChannel：同步阻塞式Sctp传输通道。
-		10、OioSctpServerChannel：同步阻塞式Sctp服务器端监听通道。
+		*1 	NioSocketChannel：异步非阻塞TCP Socket传输通道。客户端使用
+		*2 	NioServerSocketChannel：异步非阻塞TCP Socket服务器端监听通道。
+		*3 	NioDatagramChannel：异步非阻塞的UDP传输通道。
+		*4 	NioSctpChannel：异步非阻塞Sctp传输通道。
+		*5 	NioSctpServerChannel：异步非阻塞Sctp服务器端监听通道。
+		*6 	OioSocketChannel：同步阻塞式TCP Socket传输通道。
+		*7 	OioServerSocketChannel：同步阻塞式TCP Socket服务器端监听通道。
+		*8 	OioDatagramChannel：同步阻塞式UDP传输通道。
+		*9 	OioSctpChannel：同步阻塞式Sctp传输通道。
+		*10	OioSctpServerChannel：同步阻塞式Sctp服务器端监听通道。
 ###	Channel接口为网络连接主接口 网络层实现了http、webSocket等多种处理机制
-		1、当前网络连接的通道的状态(例如是否打开？是否已连接？)
-		2、网络连接的配置参数 (例如接收缓冲区大小)
-		3、提供异步的网络 I/O 操作(如建立连接,读写,绑定端口),异步调用意味着任何 I/O 调用都将立即返回,并且不保证在调用结束时所请求的 I/O 操作已完成。
-		4、调用立即返回一个 ChannelFuture 实例,通过注册监听器到 ChannelFuture 上,可以 I/O 操作成功、失败或取消时回调通知调用方。
-		5、支持关联 I/O 操作与对应的处理程序。
+		*1	当前网络连接的通道的状态(例如是否打开？是否已连接？)
+		*2	网络连接的配置参数 (例如接收缓冲区大小)
+		*3	提供异步的网络 I/O 操作(如建立连接,读写,绑定端口),异步调用意味着任何 I/O 调用都将立即返回,并且不保证在调用结束时所请求的 I/O 操作已完成。
+		*4	调用立即返回一个 ChannelFuture 实例,通过注册监听器到 ChannelFuture 上,可以 I/O 操作成功、失败或取消时回调通知调用方。
+		*5	支持关联 I/O 操作与对应的处理程序。
 ###	id
 	唯一标识
 ###	parent 
@@ -178,25 +178,52 @@
 
 ##	Handler
 	在Reactor反应器经典模型中，反应器查询到IO事件后，分发到Handler业务处理器，由Handler完成IO操作和业务处理。
+	handler对IO的处理与channel处理对应,以达到解耦channel与IO结果的目的。
 	整个的IO处理操作环节包括:
 ###	入站ChannelInboundHandler:自底向上 从通道读数据包、数据包解码、业务处理
-####	业务处理逻辑	SimpleChannelInboundHandler类
-#####	channelRead0
-#####	channelActive
-#####	channelInactive
-#####	channelReadComplete
+	需要注意的是,ChannelInboundHandler有很多个子类,在实际开发和生产后遇到的可能并不是这几个方法
+	*	channelRegistered 		通道注册事件 通道注册完成后调用
+	*	channelActive			通道激活事件 通道激活完成后调用
+	*	channelRead				通道缓冲区可读 触发通道可读事件
+	*	channelReadComplete		当通道缓冲区读完，Netty会触发通道读完事件
+	*	channelInactive			当连接被断开或者不可用，Netty会触发连接不可用事件
+	*	exceptionCaught			当通道处理过程中遇到异常,触发异常捕获事件
+####	生命周期
+	*1	handlerAdded() 			属于通道生命周期回调,当业务处理器被加到pipeline中被回调
+	*2	channelRegistered() 	属于通道生命周期回调,当通道成功绑定NioEventLoop后
+	*3	channelActive() 		属于通道生命周期回调,激活完成后回调:指的是所有的业务处理器添加、注册的异步任务完成，并且NioEventLoop线程绑定的异步任务完成。
+	*4	channelRead() 			属于通道IO回调
+	*5	channelReadComplete() 	属于通道IO回调
+	*6	channelRead() 			属于通道IO回调
+	*7	channelReadComplete() 	属于通道IO回调
+	*8	channelInactive() 		属于通道生命周期回调,当通道的底层连接已经不是ESTABLISH状态，或者底层连接已经关闭时
+	*9	channelUnregistered() 	属于通道生命周期回调,通道和NioEventLoop线程解除绑定，移除掉对这条通道的事件处理之后，回调所有业务处理器该方法
+	*10	handlerRemoved() 		属于通道生命周期回调,Netty会移除掉通道上所有的业务处理器，并且回调所有的业务处理器
+	
 ###出站ChannelOutboundHandler:自顶向下 目标数据编码、把数据包写到通道，然后由通道发送到对端
+	当业务处理完成时需要调用的出站操作。比如写入通道、建立、断开连接等等
+	*	bind					监听地址(IP+PORT)用于服务端
+	*	connect 				完成底层IO连接操作。用户客户端
+	*	write 					完成向通道的数据写入操作。仅仅是将数据写入通道缓冲区。并不是完成实际的数据写入操作
+	*	flush 					刷新缓冲区数据,将缓冲区数据写入对端
+	*	read 					从底层读取数据,从IO通道中读取数据
+	*	disConnect 				断开服务器连接,此方法主要用于客户端,例如断开TCP连接
+	*	close 					关闭底层通道
 
 
+###	channelRead重写问题
+	不调用基类channelRead方法会导致流水线截断
 
-###	channelRead0重写问题
-
-## 流水线 pipeline 
+## 流水线 pipeline ChannelInitializer
 	pipeline 将handler 整合在一起 用于处理channel事件 
 	在pipeline中 handler 对IO的处理有顺序定义 实际设计为一个双向链表
+	ChannelInitializer用于创建一条流水线
 	工作流程 
-		入站 解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) --> ProtoBuf/Json
-		出站
+		*	入站 正序执行 
+		*	TCP传输层 :解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) 
+		*	HTTP网络层:基于request对象content解析(ProtoBuf/Json)
+		*	业务处理器A->B->C
+
 ##	Future
 	继承并且扩展了Java Future对象
 	netty中Future添加了addListener、removeListener方式 支持添加对结果监听的处理
