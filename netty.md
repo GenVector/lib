@@ -1,6 +1,6 @@
 #	线程
 ##	三种线程实现方式
-	根据操作系统内核是否对线程可感知，可以把线程分为内核线程和用户线程
+	根据操作系统内核是否对线程可感知,可以把线程分为内核线程和用户线程
 	1、使用内核线程实现 Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1
 	2、使用用户线程实现
 	3、使用用户线程和轻量级进程混合实现
@@ -19,9 +19,9 @@
 ##	IO读写模型
 ###	1、BIO 同步阻塞IO
 ###	2、NIO 同步非阻塞IO
-		每次发起的IO系统调用，在内核等待数据过程中可以立即返回。用户线程不会阻塞，实时性较好。
-		不断地轮询内核，这将占用大量的CPU时间，效率低下
-		在高并发应用场景下，同步非阻塞IO也是不可用的。一般Web服务器不使用这种IO模型。这种IO模型一般很少直接使用。在Java的实际开发中，也不会涉及这种IO模型
+		每次发起的IO系统调用,在内核等待数据过程中可以立即返回。用户线程不会阻塞,实时性较好。
+		不断地轮询内核,这将占用大量的CPU时间,效率低下
+		在高并发应用场景下,同步非阻塞IO也是不可用的。一般Web服务器不使用这种IO模型。这种IO模型一般很少直接使用。在Java的实际开发中,也不会涉及这种IO模型
 ###	3、IO Multiplexing IO多路复用 
 		注册IO事件
 		注册IO处理事件
@@ -62,7 +62,7 @@
 	3>Reactor
 ##	核心对象
 ##	反应器模式由Reactor反应器线程、Handlers处理器两大角色组成：
-	(1)Reactor反应器线程的职责：负责响应IO事件，并且分发到Handlers处理器。
+	(1)Reactor反应器线程的职责：负责响应IO事件,并且分发到Handlers处理器。
 	(2)Handlers处理器的职责：非阻塞的执行业务处理逻辑。
 ##	Reactor单线程模型
 ##	Reactor多线程模型
@@ -78,9 +78,9 @@
 	handler与selectKey IO事件为一对一
 
 #	netty框架相关
-
+	netty是一个IO框架,并不是一个网络框架。可进行TCP/UDP传输层IO,可进行进程间IO
 ##	EventLoopGroup
-	boss EventLoopGroup负责新连接的监听和接受，
+	boss EventLoopGroup负责新连接的监听和接受,
 	work EventLoopGroup负责IO事件处理
 
 ##	Bootstrap启动器类
@@ -122,10 +122,14 @@
 ####	8、进程结束时关闭反应器线程组 
 			workerLoopGroup.shutdownGracefully() bossLoopGroup.shutdownGracefully()
 
+##	selector
+	Netty 基于 Selector 对象实现 I/O 多路复用,通过 Selector 一个线程可以监听多个连接的 Channel 事件。
+	当向一个 Selector 中注册 Channel 后,Selector 内部的机制就可以自动不断地查询(Select) 这些注册的 Channel 是否有已就绪的 I/O 事件(例如可读,可写,网络连接完成等),这样程序就可以很简单地使用一个线程高效地管理多个 Channel 。
+
 
 ##	channel 负责处理网络连接
-	每一个channel都代表一个网络连接,由它负责同对端进行网络通信，可以写入数据到对端，也可以从对端读取数据。
-	Netty中不直接使用Java NIO的Channel通道组件，对Channel通道组件进行了自己的封装。
+	每一个channel都代表一个网络连接,由它负责同对端进行网络通信,可以写入数据到对端,也可以从对端读取数据。
+	Netty中不直接使用Java NIO的Channel通道组件,对Channel通道组件进行了自己的封装。
 		*1 	NioSocketChannel：异步非阻塞TCP Socket传输通道。客户端使用
 		*2 	NioServerSocketChannel：异步非阻塞TCP Socket服务器端监听通道。
 		*3 	NioDatagramChannel：异步非阻塞的UDP传输通道。
@@ -159,7 +163,7 @@
 	channel关闭事件。关闭通道连接
 ###	read()
 	读取通道数据,并且启动入站处理handler,启动pipeline
-	调用ChannelFuture异步任务的sync( )方法来阻塞当前线程，一直等到通道关闭的异步任务执行完毕
+	调用ChannelFuture异步任务的sync( )方法来阻塞当前线程,一直等到通道关闭的异步任务执行完毕
 
 ###	write()
 	启程将数据写入到通道中。返回值为出站的异步任务Future。
@@ -177,30 +181,30 @@
 ###	EmbeddedChannel 测试类
 
 ##	Handler
-	在Reactor反应器经典模型中，反应器查询到IO事件后，分发到Handler业务处理器，由Handler完成IO操作和业务处理。
+	在Reactor反应器经典模型中,反应器查询到IO事件后,分发到Handler业务处理器,由Handler完成IO操作和业务处理。
 	handler对IO的处理与channel处理对应,以达到解耦channel与IO结果的目的。
 	整个的IO处理操作环节包括:
 ###	入站ChannelInboundHandler:自底向上 从通道读数据包、数据包解码、业务处理
 	需要注意的是,ChannelInboundHandler有很多个子类,在实际开发和生产后遇到的可能并不是这几个方法
-	*	channelRegistered 		通道注册事件 通道注册完成后调用
-	*	channelActive			通道激活事件 通道激活完成后调用
-	*	channelRead				通道缓冲区可读 触发通道可读事件
-	*	channelReadComplete		当通道缓冲区读完，Netty会触发通道读完事件
-	*	channelInactive			当连接被断开或者不可用，Netty会触发连接不可用事件
-	*	exceptionCaught			当通道处理过程中遇到异常,触发异常捕获事件
+		channelRegistered 		通道注册事件 通道注册完成后调用
+		channelActive			通道激活事件 通道激活完成后调用
+		channelRead				通道缓冲区可读 触发通道可读事件
+		channelReadComplete		当通道缓冲区读完,Netty会触发通道读完事件
+		channelInactive			当连接被断开或者不可用,Netty会触发连接不可用事件
+		exceptionCaught			当通道处理过程中遇到异常,触发异常捕获事件
 ####	生命周期
-	*1	handlerAdded() 			属于通道生命周期回调,当业务处理器被加到pipeline中被回调
-	*2	channelRegistered() 	属于通道生命周期回调,当通道成功绑定NioEventLoop后
-	*3	channelActive() 		属于通道生命周期回调,激活完成后回调:指的是所有的业务处理器添加、注册的异步任务完成，并且NioEventLoop线程绑定的异步任务完成。
-	*4	channelRead() 			属于通道IO回调
-	*5	channelReadComplete() 	属于通道IO回调
-	*6	channelRead() 			属于通道IO回调
-	*7	channelReadComplete() 	属于通道IO回调
-	*8	channelInactive() 		属于通道生命周期回调,当通道的底层连接已经不是ESTABLISH状态，或者底层连接已经关闭时
-	*9	channelUnregistered() 	属于通道生命周期回调,通道和NioEventLoop线程解除绑定，移除掉对这条通道的事件处理之后，回调所有业务处理器该方法
-	*10	handlerRemoved() 		属于通道生命周期回调,Netty会移除掉通道上所有的业务处理器，并且回调所有的业务处理器
+	1、	handlerAdded() 			属于通道生命周期回调,当业务处理器被加到pipeline中被回调
+	2、	channelRegistered() 	属于通道生命周期回调,当通道成功绑定NioEventLoop后
+	3、	channelActive() 		属于通道生命周期回调,激活完成后回调:指的是所有的业务处理器添加、注册的异步任务完成,并且NioEventLoop线程绑定的异步任务完成。
+	4、	channelRead() 			属于通道IO回调
+	5、	channelReadComplete() 	属于通道IO回调
+	6、	channelRead() 			属于通道IO回调
+	7、	channelReadComplete() 	属于通道IO回调
+	8、	channelInactive() 		属于通道生命周期回调,当通道的底层连接已经不是ESTABLISH状态,或者底层连接已经关闭时
+	9、	channelUnregistered() 	属于通道生命周期回调,通道和NioEventLoop线程解除绑定,移除掉对这条通道的事件处理之后,回调所有业务处理器该方法
+	10、	handlerRemoved() 		属于通道生命周期回调,Netty会移除掉通道上所有的业务处理器,并且回调所有的业务处理器
 	
-###出站ChannelOutboundHandler:自顶向下 目标数据编码、把数据包写到通道，然后由通道发送到对端
+###出站ChannelOutboundHandler:自顶向下 目标数据编码、把数据包写到通道,然后由通道发送到对端
 	当业务处理完成时需要调用的出站操作。比如写入通道、建立、断开连接等等
 	*	bind					监听地址(IP+PORT)用于服务端
 	*	connect 				完成底层IO连接操作。用户客户端
@@ -214,23 +218,57 @@
 ###	channelRead重写问题
 	不调用基类channelRead方法会导致流水线截断
 
+##	ChannelHandlerContext
+	保存 Channel 相关的所有上下文信息,同时关联一个 ChannelHandler 对象。表示handler和pipeline之间的关联关系
+###	功能
+	1、获取上下文所关联的Netty组件实例,如所关联的通道、所关联的流水线、上下文内部Handler业务处理器实例
+	2、进行入站、出站IO操作
+###	方法 和channel handler 定义方法基本一致 具体使用不是很理解
+	channel() 					获取channel
+	fireChannelRegistered()
+	fireChannelUnregistered()
+	fireChannelActive()
+	fireChannelInactive()
+	fireExceptionCaught(Throwable cause)
+	fireUserEventTriggered(Object evt)
+	fireChannelRead(Object msg)
+	fireChannelReadComplete()
+	flush()
+	pipeline()					获取pipeline
+	attr(AttributeKey<T> key) 	获取属性
+
+##	ChannelHandlerContext、channel、handler
+	Channel、Handler、ChannelHandlerContext三者的关系为：Channel通道拥有一条ChannelPipeline通道流水线,
+	每一个流水线节点为一个ChannelHandlerContext通道处理器上下文对象,每一个上下文中包裹了一个ChannelHandler通道处理器。
+	在ChannelHandler通道处理器的入站/出站处理方法中,Netty都会传递一个Context上下文实例作为实际参数。
+	通过Context实例的实参,在业务处理中,可以获取ChannelPipeline通道流水线的实例或者Channel通道的实例。
+###	三者读写IO上的区别(没理解)
+	通过Channel或ChannelPipeline的实例来调用这些方法,它们就会在整条流水线中传播。
+	然而,如果是通过ChannelHandlerContext通道处理器上下文进行调用,就只会从当前的节点开始执行Handler业务处理器,并传播到同类型处理器的下一站（节点）
+
 ## 流水线 pipeline ChannelInitializer
 	pipeline 将handler 整合在一起 用于处理channel事件 
 	在pipeline中 handler 对IO的处理有顺序定义 实际设计为一个双向链表
 	ChannelInitializer用于创建一条流水线
 	工作流程 
-		*	入站 正序执行 
-		*	TCP传输层 :解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) 
-		*	HTTP网络层:基于request对象content解析(ProtoBuf/Json)
-		*	业务处理器A->B->C
-
+		入站 正序执行 
+			1、	TCP传输层 :解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) 
+			2、	HTTP网络层:基于request对象content解析(ProtoBuf/Json)
+			3、	业务处理器A->B->C
+###	截断流水线
+	channelRead()没有调用super.channelRead() 流水线将不会再像后传递
+###	热插拔
+	动态地增加、删除流水线上的业务处理器Handler。包括但不仅限于以下方法
+	addFirst(EventExecutorGroup group, ChannelHandler... handlers)
+	addLast(ChannelHandler... handlers)
+	remove(ChannelHandler handler)
+	remove(String name)
 ##	Future
 	继承并且扩展了Java Future对象
 	netty中Future添加了addListener、removeListener方式 支持添加对结果监听的处理
-	在Netty的网络编程中，网络连接通道的输入和输出处理都是异步进行的，都会返回一个ChannelFuture接口的实例。可以通过ChannelFuture添加异步回调的监听器
+	在Netty的网络编程中,网络连接通道的输入和输出处理都是异步进行的,都会返回一个ChannelFuture接口的实例。可以通过ChannelFuture添加异步回调的监听器
 	Future.syncUninterruptibly 不会被中断的sync
 	Future.sync 当前线程等待直接Future执行完毕。但是如果Future执行失败则会抛出失败原因
-
 ###	ChannelFuture、Future 异步通知和监听机制
 	在 Netty 中所有的 IO 操作都是异步的,不能立刻得知消息是否被正确处理。但是可以过一会等它执行完成或者直接注册一个监听,具体的实现就是通过 Future 和 ChannelFutures,他们可以注册一个监听,当操作执行成功或失败时监听会自动触发注册的监听事件。
 	常见有如下操作:
@@ -240,43 +278,83 @@
 	4、通过 isCancelled 方法来判断已完成的当前操作是否被取消;
 	5、通过 addListener 方法来注册监听器,当操作已完成(isDone 方法返回完成),将会通知指定的监听器;如果 Future 对象已完成(无论是否成功),则理解通知指定的监听器。可设置超时处理逻辑
 	6、通过sync等操作阻塞和调度NIO(高风险慎用,精通线程调度大神自动忽略)
-
 ###	ChannelPromise是一种可写的特殊 ChannelFuture 继承自Future
     ChannelPromise setSuccess(Void var1);
     ChannelPromise setSuccess();
     boolean trySuccess();
     ChannelPromise setFailure(Throwable var1);
+##	ByteBuf缓冲区
+	(注意内存耗尽的问题)
+###与Java NIO的ByteBuffer相比,ByteBuf的优势
+	* Pooling（池化,这点减少了内存复制和GC,提升了效率）
+	* 复合缓冲区类型,支持零复制
+	* 不需要调用flip()方法去切换读/写模式
+	* 扩展性好,例如StringBuffer
+	* 可以自定义缓冲区类型
+	* 读取和写入索引分开
+	* 方法的链式调用
+	* 可以进行引用计数,方便重复使用
+###结构
+	ByteBuf是一个字节容器,内部是一个字节数组。从逻辑上来分,字节容器内部可以分为四个部分。四部分为连续的空间,由指针区分
+	一、已废弃:已用字节,表示已经使用完成的无效字节
+	二、可读:保存的有效数据,所有读取的数据来自这一部分
+	三、可写:读写BUF索引是分开的 IO写入的byte都会写到这一部分
+	四、可扩容字节:表示该ByteBuf还能扩容多大的空间
 
-##	selector
-	Netty 基于 Selector 对象实现 I/O 多路复用,通过 Selector 一个线程可以监听多个连接的 Channel 事件。
-	当向一个 Selector 中注册 Channel 后,Selector 内部的机制就可以自动不断地查询(Select) 这些注册的 Channel 是否有已就绪的 I/O 事件(例如可读,可写,网络连接完成等),这样程序就可以很简单地使用一个线程高效地管理多个 Channel 。
+###	重要属性
+	* readerIndex
+		指示读取的起始位置。每读取一个字节,readerIndex自动增加1。一旦readerIndex与writerIndex相等,则表示ByteBuf不可读了。
+	* writerIndex
+		指示写入的起始位置。每写一个字节,writerIndex自动增加1。一旦增加到writerIndex与capacity()容量相等,则表示ByteBuf已经不可写了。
+		capacity()是一个成员方法,不是一个成员属性,它表示ByteBuf中可以写入的容量。注意,它不是最大容量maxCapacity
+	* maxCapacity
+	表示ByteBuf可以扩容的最大容量。当向ByteBuf写数据的时候,如果容量不足,可以进行扩容。扩容的最大限度由maxCapacity的值来设定,超过maxCapacity就会报错。
+###	重要方法
+####	容量相关
+			capacity()
+			maxCapacity()
+####	写入相关
+			isWritable()			是否可读
+			writableBytes()
+			maxWritableBytes()
+			writeBytes(byte[] src)
+			write**(TYPE value）		**表示基本数据类型
+			set**(TYPE value）		**表示基本数据类型
+####	读取相关
+			isReadable()
+			readableBytes()
+			readBytes(byte[] dst)
+			markReaderIndex()
+			resetReaderIndex()
+###	内存回收与引用计数
 
-##	ChannelHandlerContext
-	保存 Channel 相关的所有上下文信息,同时关联一个 ChannelHandler 对象。
+###	Allocator分配器
 
-##	ByteBuf二进制流
+###	ByteBuf缓冲区的类型
+
 
 ##	Decoder与Encoder解码器
-	将TCP二进制传输 转化为Java Polo。这一层定义的是通道channel read/write 的数据编码格式。
-	例如在网络编程中我们经常用到的HttpServerCodec
+	将IO二进制传输 转化为Java Polo。这一层定义的是通道channel的数据编码格式。
+
+###	HttpServerCodec	
+	httpRequest
+
+###	netty WebSocketFrame
+	* BinaryWebSocketFrame 			发送二进制消息
+	* TextWebSocketFrame 			发送文本消息
+	* ContinuationWebSocketFrame	混合text\二进制 类型消息
+	* PingWebSocketFrame 			ping
+	* PongWebSocketFrame 			pong
+	* CloseWebSocketFrame 			关闭
 
 ##	json与protobuf编解码
-	涉及对象的序列化/反序列化的问题，例如一个对象从客户端通过TCP方式发送到服务器端；因为TCP协议（UDP等这种低层协议）只能发送字节流
-	所以需要应用层将Java POJO对象序列化成字节流，数据接收端再反序列化成Java POJO对象。
-	注意与HttpServerCodec编解码定义的区别。 这里定义的是httpRequest数据包的编码格式。
-###	httpRequest content->json/protobuf
-	tcp传输层传输数据为二进制包,需要将二进制包解码成Java Polo。
+	涉及对象的序列化/反序列化的问题,例如一个对象从客户端通过TCP方式发送到服务器端；因为TCP协议（UDP等这种低层协议）只能发送字节流
+	netty将字节流转化为对象的解析和反解析过程
 
-	在这里简单说个理解。netty不是个网络框架,是一个IO框架。它不仅可以处理TCP连接,更可以通过自定义编解码协议,处理和传输层相关的IO事件。
 ###	半包、粘包问题
-
-#netty WebSocketFrame
-##BinaryWebSocketFrame 发送二进制消息
-##CloseWebSocketFrame 关闭
-##ContinuationWebSocketFrame
-##PingWebSocketFrame ping
-##PongWebSocketFrame pong
-##TextWebSocketFrame 发送文本消息
+	数据传输过程中socket缓冲区大小是固定的,如果数据包过大或者过小,都会将一个数据包分成几个(或者几个包合并成一个)进行传输。
+	解决的思路大致为
+	netty的大多数编解码器为开发者解决了这个问题
 
 ##	设置cookie
 	res.headers().set(HttpHeaderNames.SET_COOKIE, new DefaultCookie("IP", "123456"));
@@ -285,10 +363,13 @@
 	String value = request.getHeader("Cookie");
 	System.out.println(value);
 ##	netty没有实现session 需要自己实现
-##  跨域问题解决
+##  跨域问题解决 这里简单记录下netty配置 详细原理和解决方案在Internet中记录
     //允许携带的header中属性 支持 * 通配符 ajax cookie跨域访问中 * 无法支持 需要显示指定可以携带哪些header信息
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type,X-Requested-With");
     //是否允许携带cookie
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
     //支持的跨域名访问 ajax cookie跨域访问中 * 无法支持 ORIGIN 属性只能设置 一个 需要服务端手动配置 白名单匹配
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+
+##	即时通讯与webSocket
+	即时通讯IM不一定要使用WS协议。TCP连接大多数情况下的性能更加优秀

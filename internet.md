@@ -155,30 +155,34 @@
 #	互联网、因特网、万维网
 	互联网 > 因特网 > 万维网
 
-##	互联网：由通信的设备,如计算机、手机等,组成的网络。互联网是一个逻辑概念,即使仅有两台机器,不论用何种技术使其彼此通信,也叫互联网
+##	互联网：
+	由通信的设备,如计算机、手机等,组成的网络。互联网是一个逻辑概念,即使仅有两台机器,不论用何种技术使其彼此通信,也叫互联网
 
 ##  目前所有局域网都是以太网 以太网是局域网技术
 ##  因特网(Internet)目前全球最大的一个电子计算机互联网
 
-### Internet是一组全球信息资源的总汇。INTERNET是由于许多小的网络(子网)互联而成的一个逻辑网,每个子网中连接着若干台计算机(主机)。Internet以相互交流信息资源为目的,基于一些共同的协议,并通过许多路由器和公共互联网而成,它是一个信息资源和资源共享的集合
-###	因特网并不是全球唯一的互联网络。例如在欧洲,跨国的互联网络就有“欧盟网”(Euronet),“欧洲学术与研究网”(EARN),“欧洲信息网”(EIN),在美国还有“国际学术网”(BITNET)
-##  因特网 HTTP协议下 都是用了万维网 包括WS协议
+### Internet是一组全球信息资源的总汇。
+	1、INTERNET是由于许多小的网络(子网)互联而成的一个逻辑网,每个子网中连接着若干台计算机(主机)。Internet以相互交流信息资源为目的,基于一些共同的协议,并通过许多路由器和公共互联网而成,它是一个信息资源和资源共享的集合
+	2、因特网并不是全球唯一的互联网络。例如在欧洲,跨国的互联网络就有“欧盟网”(Euronet),“欧洲学术与研究网”(EARN),“欧洲信息网”(EIN),在美国还有“国际学术网”(BITNET)
+	3、因特网 HTTP协议下 都是用了万维网 包括WS协议
 
 
 #   服务器
-##  应用服务器(Tomcat作为servlet容器 处理动态资源请求 负责将HTTP request 适配为servlet可解析的类型规范) 
-##  HTTP服务器(Apache、NGINX等 作为静态HTTP资源服务器)
-##  通常应用服务器和http服务器共同使用 分别负责处理HTTP静态资源和处理动态资源
+##  应用服务器
+	Tomcat作为servlet容器 处理动态资源请求 负责将HTTP request 适配为servlet可解析的类型规范)
+##  HTTP服务器
+	Apache、NGINX等 作为静态HTTP资源服务器
+	通常应用服务器和http服务器共同使用 分别负责处理HTTP静态资源和处理动态资源
 ##	KONG API GATEWAY
 	基于NGINX 提供包括HTTP基本认证、密钥认证、CORS、TCP、UDP、文件日志、API请求限流、请求转发及NGINX监控等基本功能
 
 #	DNS协议
 ##	DNS 解析从后往前解析 根域服务器 . -> 权威域名服务器com/cn(一级域名) -> baidu.com. -> www.baidu.com. 直到找到最终IP
 ##	流程
-	1>cache 首先判断client缓存寻址
-	2>etc/hosts 如果没有缓存会先去找主机hosts配置文件
-	3>根域服务器(13个IP地址) 然后根据 寻址
-	4>顶级(一级)域名服务器
+	1> cache 首先判断client缓存寻址
+	2> etc/hosts 如果没有缓存会先去找主机hosts配置文件
+	3> 根域服务器(13个IP地址) 然后根据 寻址
+	4> 顶级(一级)域名服务器
 
 ##	一级域说明
 	.com (商业机构);
@@ -197,32 +201,30 @@
 ##	NS记录
 
 #   cookie与跨域问题总结
-##  跨域是浏览器限制 所以这里指的域名仅仅针对浏览器 具体哪一层DNS负责解析这个域名 服务端和浏览器都不关心
-### 引申一下就是 每一层代理协议之间是隔离的 无法相互识别对方的规则 所以在请求链路中的安全校验也是相对的
-### 代理只负责把数据传递给下一层协议 并做一些限制
-##  cookie存储在浏览器 由服务端解析。cookie的跨域问题同理 不关心DNS解析 只要符合域名规则 可携带cookie
+	* 跨域是浏览器限制 所以这里指的域名仅仅针对浏览器 具体DNS域名解析、代理、寻址 服务端和浏览器都不关心
+	* 引申一下就是 每一层代理协议之间是隔离的 无法相互识别对方的规则 所以在请求链路中的安全校验也是相对的
+	* 代理只负责把数据传递给下一层应用代理 并做一些限制(目前开发生产中我们能改变的都是应用层代理NGINX、KONG等)
+	* cookie存储在浏览器 、cookie由服务端解析。cookie的跨域问题同理 需要服务端告诉浏览器放行
 ##  cookie属性详细解析
-### domain
-### path
-### key/value
-### max age(expire)
-### setcookie方法成功后,只能在下次请求域中通过读取cookie。cookie是从request中header读取的,你response还没返回给客户端当然读不到
+	一、domain
+	二、path
+	三、key/value
+	四、max age(expire)
+	五、setcookie方法成功后,只能在下次请求域中通过读取cookie。cookie是从request中header读取的,你response还没返回给客户端当然读不到
 
-##  header -> host origin refer 属性
-### Host 客户端指定自己想访问的WEB服务器的域名/IP 地址和端口号。在任何类型请求中,request都会包含此header信息。
-### Origin用来说明请求从哪里发起的,包括,且仅仅包括协议和域名。这个参数一般只存在于CORS跨域请求中,可以看到response有对应的header：Access-Control-Allow-Origin。
-###	Referer 告知服务器请求的原始资源的URI,其用于所有类型的请求,并且包括：协议+域名+查询参数(注意,不包含锚点信息)。可能包含ID或密码等敏感信息,如果写入referer,则可能导致信息泄露。
+##  header -> host origin refer 属性对比
+	* Host 客户端指定自己想访问的WEB服务器的域名/IP 地址和端口号。在任何类型请求中,request都会包含此header信息。
+	* Origin用来说明请求从哪里发起的,包括,且仅仅包括协议和域名。这个参数一般只存在于CORS跨域请求中,可以看到response有对应的header：Access-Control-Allow-Origin。
+	* Referer 告知服务器请求的原始资源的URI,其用于所有类型的请求,并且包括：协议+域名+查询参数(注意,不包含锚点信息)。可能包含ID或密码等敏感信息,如果写入referer,则可能导致信息泄露。
 
-##	跨域问题解决
+##	跨域问题解决(包括ajax跨域携带cookie)
     //允许携带的header中属性 支持 * 通配符 ajax cookie跨域访问中 * 无法支持 需要显示指定可以携带哪些header信息
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type,X-Requested-With");
     //是否允许携带cookie
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
     //支持的跨域名访问 ajax cookie跨域访问中 * 无法支持 ORIGIN 属性只能设置 一个 需要服务端手动配置 白名单匹配
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-
-##	代理可以代替服务端去设置允许跨域问题 代理有拦截和处理请求setResponse的能力
-##	浏览器还有很多限制 AJAX 跨域携带cookie 白名单问题 允许携带的header
+##	应用层代理可以代替服务端去设置允许跨域问题 代理有拦截和处理请求setResponse的能力
 
 #	网关、网桥、路由器、交换机
 ##	路由器
