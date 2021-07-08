@@ -10,15 +10,42 @@
 	spring真正的执行方法并不是直接执行方法,而是执行代理方法。面向切面编程的原理也是如此。
 
 #	spring BOOT 启动流程
+##	new SpringApplication(primarySources)
+	1、获取application类型
+	2、getSpringFactoriesInstances 初始化容器资源
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		Enumeration<URL> urls = (classLoader != null ?classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
+		createSpringFactoriesInstances
+	3、赋值 setInitializers setListeners 
+		mainApplicationClass = ***.InstantMessageApplication
+		primarySource = ***.InstantMessageApplication
+```java
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+	Assert.notNull(primarySources, "PrimarySources must not be null");
+	this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+	//webApplicationType = SERVLET
+	this.webApplicationType = deduceWebApplicationType();
+	setInitializers((Collection) getSpringFactoriesInstances(
+			ApplicationContextInitializer.class));
+	setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+	this.mainApplicationClass = deduceMainApplicationClass();
+}
+```
+
+
+##	springApplication.run()
+	StopWatch 计时器 方便的对程序部分代码进行计时(ms级别)，适用于同步单线程代码块。
+
 #	spring MVC 处理请求
 ##  RequestMappingHandlerMapping->afterPropertiesSet->initHandlerMethods->mappingRegistry.register
 
-#spring BEAN生命周期 
-###  Instantiation 实例化
-###  Populate 属性赋值
-###  Initialization 初始化
-###  Destruction 销毁
-##作用域
+#	spring BEAN生命周期 
+	* Instantiation 实例化
+	* Populate 属性赋值
+	* Initialization 初始化
+	* Destruction 销毁
+
+##	作用域
 ###  singleton
     是指在Spring IoC容器中仅存在一个Bean的示例,Bean以单实例的方式存在
 ###  prototype
@@ -28,11 +55,26 @@
 ###  global session
 ###  application
 
-#Spring
-##普通Java类获取spring 容器的bean的5种方法
-方法一：在初始化时保存ApplicationContext对象
-方法二：通过Spring提供的工具类获取ApplicationContext对象
-方法三：继承自抽象类ApplicationObjectSupport
-方法四：继承自抽象类WebApplicationObjectSupport
-方法五：实现接口ApplicationContextAware
-##Aware接口为了能够感知到自身的一些属性
+##	普通Java类获取spring 容器的bean的5种方法 全部直接或者间接继承自 BeanFactory
+	ApplicationContext 继承自 BeanFactory
+	applicationContext.getBean(beanName);
+	beanFactory.getBean("taskTestService");
+	ApplicationContext、BeanFactory 对象         				
+	ApplicationObjectSupport 		
+	WebApplicationObjectSupport		
+	实现接口ApplicationContextAware				
+									
+##	Aware接口为了能够感知到自身的一些属性
+
+#	EJB JavaBean POJO VO
+##	EJB	企业级Java bean
+###	VO POJO 简单Java Bean
+
+#	注意、spring AOP、cache、asyn全部是依赖代理实现的。可以理解为spring所有增强、解耦和防止代码侵入性全部都是依赖代理实现的
+#	Cache
+##	@EnableCache
+##	@CacheAble
+
+#	Async
+##	EnableAsync
+##	@Async

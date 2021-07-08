@@ -1,39 +1,43 @@
 #	线程
 ##	三种线程实现方式
 	根据操作系统内核是否对线程可感知,可以把线程分为内核线程和用户线程
-	1、使用内核线程实现 Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1
-	2、使用用户线程实现
+	1、使用内核线程实现 Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1。程序线程实现依赖内核线程实现。
+	2、使用用户线程实现。用户
 	3、使用用户线程和轻量级进程混合实现
 
 ##	线程分配方式
 	1、抢占式 目前Linux、windows等操作系统对线程的分配方式为抢占式
 	2、调度式
 
-#	IO
-##	IO原理 read、write
+#	程序IO与内核IO
+	Linux定义了一切皆文件。然而在计算机程序中,我们可以毫不客气地说一切皆IO。无论是传输、交互、读写、还是处理。
 	上层程序的read write 方法本质上是内存在缓冲区的复制。而真正内核缓冲区与物理磁盘之间的内存交互上层应用程序并不感知,也不关心。
-	内存read:物理磁盘->内核缓冲区->程序缓冲区
-	内存write:程序缓冲区->内核缓冲区->物理磁盘
-	所以同步等待IO事件的完成是一件很消耗的操作。在此背景下,探索新的IO才有存在的意义
+		内存read:物理磁盘->内核缓冲区->程序缓冲区
+		内存write:程序缓冲区->内核缓冲区->物理磁盘
+	所以同步等待IO事件的完成是一件很消耗的操作。在此背景下,探索新的IO方式才有存在的意义
 
 ##	IO读写模型
 ###	1、BIO 同步阻塞IO
+	传统同步阻塞IO,不过多介绍
 ###	2、NIO 同步非阻塞IO
 		每次发起的IO系统调用,在内核等待数据过程中可以立即返回。用户线程不会阻塞,实时性较好。
 		不断地轮询内核,这将占用大量的CPU时间,效率低下
 		在高并发应用场景下,同步非阻塞IO也是不可用的。一般Web服务器不使用这种IO模型。这种IO模型一般很少直接使用。在Java的实际开发中,也不会涉及这种IO模型
 ###	3、IO Multiplexing IO多路复用 
+	由统一的选择器轮询IO事件,将就绪状态的事件分发给不同的事件处理器。依赖系统内核提供的接口实现。
 		注册IO事件
 		注册IO处理事件
 		注册定时轮询任务
 		定时轮询IO事件,并且处理就绪的IO事件
-###	4、AIO 异步IO （目前只有Windows IIS实现了AIO）
-
+###	4、AIO 异步IO 
+	真正的异步IO,由系统调起应用程序（目前只有Windows IIS实现了AIO）也不多做介绍
 #	Java NIO 
-##	使用IO多路复用模型实现
+	Java NIO不是传统意义上的NIO。指的是 Java new IO,对应的是 Java OIO(old IO)。
+	同样使用IO多路复用模型实现。设计思路大致相同,这里只做简单介绍
 ##	核心对象 buffer selector channel
-###	线程回调 Runable -> Callable<T>
-###	桥接 FutureTask<T>实现了 -> Future接口 用于执行callable任务 并且得到返回值
+##	使用
+	线程回调 Runable -> Callable<T>
+	桥接 FutureTask<T>实现了 -> Future接口 用于执行callable任务 并且得到返回值
 	(1)判断并发任务是否执行完成。
 	(2)获取并发的任务完成后的结果。
 	(3)取消并发执行中的任务。
@@ -49,33 +53,36 @@
 		ShortBuffer
 		MappedByteBuffer
 
-#	Guava Java扩展包 支持异步回调 监听线程执行结果
+#	Guava Java扩展包 
+	支持异步回调 监听线程执行结果。同样简单了解。
 	和reactor反应器模式有着异曲同工的地方
 	FutureCallback 主要方法 onSuccess onFailure 支持添加监听
 	ListenableFuture -> Future 方法 addListener()
 
-#	Reactor线程模型 与IO多路复用
+#	Reactor反应器模式 
 ##	应用:Nginx Redis netty
 ##	网络服务程序发展史
 	1>OIO while(true)
 	2>OIO One Connection PerThread
 	3>Reactor
 ##	核心对象
-##	反应器模式由Reactor反应器线程、Handlers处理器两大角色组成：
-	(1)Reactor反应器线程的职责：负责响应IO事件,并且分发到Handlers处理器。
-	(2)Handlers处理器的职责：非阻塞的执行业务处理逻辑。
+	反应器模式由Reactor反应器线程、Handlers处理器两大角色组成：
+		(1)Reactor反应器线程的职责：负责响应IO事件,并且分发到Handlers处理器。
+		(2)Handlers处理器的职责：非阻塞的执行业务处理逻辑。
 ##	Reactor单线程模型
+
 ##	Reactor多线程模型
 ##	主从 Reactor多线程模型
-##	发布订阅者模式
-	订阅者对TOPIC有依赖关系
-	同一个主题下的消息可以被多个订阅者订阅
-	所以不同订阅者重复订阅 被订阅者订阅多次
-##	生产消费者模式
-	多个生产者与多个消费者通过队列连接起来
-	只消费一次
-##	reactor反应器模式
-	handler与selectKey IO事件为一对一
+##	比较reactor 与 生产消费者模式、发布订阅者模式
+	发布订阅者模式
+		订阅者对TOPIC有依赖关系
+		同一个主题下的消息可以被多个订阅者订阅
+		所以不同订阅者重复订阅 被订阅者订阅多次
+	生产消费者模式
+		多个生产者与多个消费者通过队列连接起来
+		只消费一次
+	reactor反应器模式
+		handler与selectKey IO事件为一对一
 
 #	netty框架相关
 	netty是一个IO框架,并不是一个网络框架。可进行TCP/UDP传输层IO,可进行进程间IO
@@ -285,7 +292,7 @@
     ChannelPromise setFailure(Throwable var1);
 ##	ByteBuf缓冲区
 	(注意内存耗尽的问题)
-###与Java NIO的ByteBuffer相比,ByteBuf的优势
+###	与Java NIO的ByteBuffer相比,ByteBuf的优势
 	* Pooling（池化,这点减少了内存复制和GC,提升了效率）
 	* 复合缓冲区类型,支持零复制
 	* 不需要调用flip()方法去切换读/写模式
@@ -296,6 +303,7 @@
 	* 可以进行引用计数,方便重复使用
 ###结构
 	ByteBuf是一个字节容器,内部是一个字节数组。从逻辑上来分,字节容器内部可以分为四个部分。四部分为连续的空间,由指针区分
+	读写分离,指针互不干扰。
 	一、已废弃:已用字节,表示已经使用完成的无效字节
 	二、可读:保存的有效数据,所有读取的数据来自这一部分
 	三、可写:读写BUF索引是分开的 IO写入的byte都会写到这一部分
@@ -308,33 +316,146 @@
 		指示写入的起始位置。每写一个字节,writerIndex自动增加1。一旦增加到writerIndex与capacity()容量相等,则表示ByteBuf已经不可写了。
 		capacity()是一个成员方法,不是一个成员属性,它表示ByteBuf中可以写入的容量。注意,它不是最大容量maxCapacity
 	* maxCapacity
-	表示ByteBuf可以扩容的最大容量。当向ByteBuf写数据的时候,如果容量不足,可以进行扩容。扩容的最大限度由maxCapacity的值来设定,超过maxCapacity就会报错。
+		表示ByteBuf可以扩容的最大容量。当向ByteBuf写数据的时候,如果容量不足,可以进行扩容。扩容的最大限度由maxCapacity的值来设定,超过maxCapacity就会报错。
 ###	重要方法
 ####	容量相关
 			capacity()
 			maxCapacity()
 ####	写入相关
 			isWritable()			是否可读
-			writableBytes()
+			writableBytes()	
 			maxWritableBytes()
-			writeBytes(byte[] src)
-			write**(TYPE value）		**表示基本数据类型
-			set**(TYPE value）		**表示基本数据类型
+			writeBytes(byte[] src)	
+			write**(TYPE value）		**表示基本数据类型 写入基础数据类型数据
+				writeByte()、writeBoolean()、writeChar()、writeShort()、writeInt()、writeLong()、writeFloat()、writeDouble()
+			set**(TYPE value）		**表示基本数据类型 不改变writerIndex指针值，包含了8大基础数据类型的设置。
+
 ####	读取相关
 			isReadable()
-			readableBytes()
-			readBytes(byte[] dst)
-			markReaderIndex()
-			resetReaderIndex()
+			readableBytes()				返回表示ByteBuf当前可读取的字节数，它的值等于writerIndex减去readerIndex
+			readBytes(byte[] dst)		readBoolean()、readChar()、readShort()、readInt()、readLong()、readFloat()、readDouble()
+			markReaderIndex() resetReaderIndex()
+				前一个方法表示把当前的读指针ReaderIndex保存在markedReaderIndex属性中。
+				后一个方法表示把保存在markedReaderIndex属性的值恢复到读指针ReaderIndex中。markedReaderIndex属性定义在AbstractByteBuf抽象基类中。
+
 ###	内存回收与引用计数
+	ByteBuf的内存回收工作是通过引用计数的方式管理的
+	retain()	引用计数+1
+	release() 	引用计数-1	
+		在Netty的业务处理器开发过程中，应该坚持一个原则：retain和release方法应该结对使用。，在一个方法中，调用了retain，就应该调用一次release。
+	当引用计数已经为0，Netty会进行ByteBuf的回收。分为两种情况：
+	（1）Pooled池化的ByteBuf内存，回收方法是：放入可以重新分配的ByteBuf池子，等待下一次分配。
+	（2）Unpooled未池化的ByteBuf缓冲区，回收分为两种情况：如果是堆（Heap）结构缓冲，会被JVM的垃圾回收机制回收；如果是Direct类型，调用本地方法释放外部内存（unsafe.freeMemory）
 
 ###	Allocator分配器
+	* Netty通过ByteBufAllocator分配器来创建缓冲区和分配内存空间。Netty提供了ByteBufAllocator的两种实现：PoolByteBufAllocator和UnpooledByteBufAllocator。
+	* 可以通过Java系统参数（System Property）的选项io.netty.allocator.type进行配置，配置时使用字符串值："unpooled"，"pooled"。
+	* 在Netty程序中设置启动器Bootstrap的时候，将PooledByteBufAllocator设置为默认的分配器
+```java
+	bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+```
+	* 目前netty4.1之后默认分配器为PooledByteBufAllocator。代码如下所示
+```java
+		ByteBufAllocator alloc;
+        if ("unpooled".equals(allocType)) {
+            alloc = UnpooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else if ("pooled".equals(allocType)) {
+            alloc = PooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+        } else {
+            alloc = PooledByteBufAllocator.DEFAULT;
+            logger.debug("-Dio.netty.allocator.type: pooled (unknown: {})", allocType);
+        }
+        DEFAULT_ALLOCATOR = alloc;
+```
+
+####	Jemalloc内存管理库
+	//todo待补充
+	在底层，Netty为我们干了所有“脏活、累活”！这主要是因为Netty用到了Java的Jemalloc内存管理库。
 
 ###	ByteBuf缓冲区的类型
+	根据内存的管理方不同，分为堆缓存区和直接缓存区，也就是HeapByteBuf和DirectByteBuf。另外，为了方便缓冲区进行组合，提供了一种组合缓存区。
+	三种缓冲区的类型，无论哪一种，都可以通过池化（Pooled）、非池化（Unpooled）两种分配器来创建和分配内存空间。如下所示
+####	HeapByteBuf 内存分配在Java heap上
+```java
+		ByteBuf heapBuf =  ByteBufAllocator.DEFAULT.buffer();//池化
+		ByteBuf heapBuf = Unpooled.buffer();//非池化
+```
+####	DirectByteBuf 内存分配在直接内存中
+	  		* Direct Memory不属于Java堆内存，所分配的内存其实是调用操作系统malloc()函数来获得的；由Netty的本地内存堆Native堆进行管理。
+			* Direct Memory容量可通过-XX:MaxDirectMemorySize来指定，如果不指定，则默认与Java堆的最大值（-Xmx指定）一样。注意：并不是强制要求，有的JVM默认Direct Memory与-Xmx无直接关系。
+			* Direct Memory的使用避免了Java堆和Native堆之间来回复制数据。在某些应用场景中提高了性能。
+			* 在需要频繁创建缓冲区的场合，由于创建和销毁Direct Buffer（直接缓冲区）的代价比较高昂，因此不宜使用Direct Buffer。
+			* DirectBuffer尽量在池化分配器中分配和回收。如果能将Direct Buffer进行复用，在读写频繁的情况下，就可以大幅度改善性能。
+			* 对Direct Buffer的读写比Heap Buffer快，但是它的创建和销毁比普通Heap Buffer慢。
+			* 在Java的垃圾回收机制回收Java堆时，Netty框架也会释放不再使用的Direct Buffer缓冲区，因为它的内存为堆外内存，所以清理的工作不会为Java虚拟机（JVM）带来压力。
+			* 注意一下垃圾回收的应用场景：（1）垃圾回收仅在Java堆被填满，以至于无法为新的堆分配请求提供服务时发生；（2）在Java应用程序中调用System.gc()函数来释放内存”
 
+```java
+		ByteBuf directBuf =  ByteBufAllocator.DEFAULT.directBuffer();
+		ByteBuf heapBuf = Unpooled.directBuffer();//非池化
+```
+####	CompositeBuf 组合类型BUF
+```java
+		CompositeByteBuf cbuf = ByteBufAllocator.DEFAULT.compositeBuffer();
+		CompositeByteBuf cbuf = Unpooled.compositeBuffer(3);//非池化
+		//消息头
+        ByteBuf headerBuf = Unpooled.copiedBuffer("疯狂创客圈:", utf8);
+        //消息体1
+        ByteBuf bodyBuf = Unpooled.copiedBuffer("高性能 Netty", utf8);
+        cbuf.addComponents(headerBuf, bodyBuf);
+```
+
+###	netty如何创建和释放ByteBuf实例
+	在Netty开发中，必须密切关注Bytebuf缓冲区的释放，如果释放不及时，会造成Netty的内存泄露（Memory Leak），最终导致内存耗尽。
+####	创建ByteBuf实例
+####	入站释放ByteBuf实例
+#####	TailHandler自动释放
+	Netty默认会在ChannelPipline通道流水线的最后添加一个TailHandler末尾处理器，它实现了默认的处理方法，在这些方法中会帮助完成ByteBuf内存释放的工作。
+	super.channelRead(ctx,msg);
+	在需要截断流水线的情况下,需要考虑手动释放或者SimpleChannelInboundHandler
+#####	byteBuf.release()
+#####	SimpleChannelInboundHandler
+	自动释放ByteBuf,业务处理需要调用channelRead0(ctx,msg)。实现请查看源码
+```java
+@Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        boolean release = true;
+        try {
+            if (acceptInboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
+                I imsg = (I) msg;
+                channelRead0(ctx, imsg);
+            } else {
+                release = false;
+                ctx.fireChannelRead(msg);
+            }
+        } finally {
+            if (autoRelease && release) {
+                ReferenceCountUtil.release(msg);
+            }
+        }
+    }
+
+        public static boolean release(Object msg) {
+        	//需要说明的是,FullHttpRequest、WebSocketFrame全部实现了ReferenceCounted接口
+        if (msg instanceof ReferenceCounted) {
+            return ((ReferenceCounted) msg).release();
+        }
+        return false;
+    }
+```
+
+####	出站释放ByteBuf实例
+#####	HeadHandler自动释放
+	在出站处理流程中，申请分配到的ByteBuf主要是通过HeadHandler完成自动释放的。
+	在write出站写入通道时，通过调用ctx.writeAndFlush(Bytebufmsg)，Bytebuf缓冲区进入出站处理的流水线。
+	在出站流水线最后(head)会来到HeadHandler,在数据输出完成后ByteBuf被释放。如果计数器为零,彻底释放。(这里有个问题啊,如果不为零就不释放了???那岂不是也有问题)
 
 ##	Decoder与Encoder解码器
 	将IO二进制传输 转化为Java Polo。这一层定义的是通道channel的数据编码格式。
+	编解码过程中需要解决半包、粘包、分包发送等问题
 
 ###	HttpServerCodec	
 	httpRequest
