@@ -31,7 +31,7 @@
 		定时轮询IO事件,并且处理就绪的IO事件
 ###	4、AIO 异步IO 
 	真正的异步IO,由系统调起应用程序（目前只有Windows IIS实现了AIO）也不多做介绍
-	
+
 #	Java NIO 
 	Java NIO不是传统意义上的NIO。指的是 Java new IO,对应的是 Java OIO(old IO)。
 	同样使用IO多路复用模型实现。设计思路大致相同,这里只做简单介绍
@@ -86,54 +86,71 @@
 		handler与selectKey IO事件为一对一
 
 #	netty框架相关
-	netty是一个IO框架,并不是一个网络框架。可进行TCP/UDP传输层IO,可进行进程间IO
+	netty基于reactor反应器模式设计。
+	netty是一个IO框架,并不是一个网络框架。可进行TCP/UDP传输层IO,可进行进程间IO。
+	以下是重要对象
 ##	EventLoopGroup
-	boss EventLoopGroup负责新连接的监听和接受,
-	work EventLoopGroup负责IO事件处理
+	服务端反应器需要两个反应器线程组。
+		boss EventLoopGroup 负责新连接的监听和接受
+		work EventLoopGroup 负责IO事件处理
 
 ##	Bootstrap启动器类
-	-	server端 ServerBootstrap
-	-	client端 Bootstrap
-	可类比 SpringApplication
-	Bootstrap 意思是引导,一个 Netty 应用通常由一个 Bootstrap 开始,主要作用是配置整个 Netty 程序,串联各个组件,Netty 中 Bootstrap 类是客户端程序的启动引导类,ServerBootstrap 是服务端启动引导类。
+	* server端 ServerBootstrap
+	* client端 Bootstrap
+	启动引导类 可类比 SpringApplication
+	一个 Netty 应用通常由一个 Bootstrap 开始,主要作用是配置整个 Netty 程序,串联各个组件,Netty 中 Bootstrap 类是客户端程序的启动引导类,ServerBootstrap 是服务端启动引导类。
 
 ###	父子通道 parent用于处理NioServerSocketChannel child用于处理 NioSocketChannel
 ###	基于 ServerBootstrap(服务端启动引导类)	启动流程
-	!!这个地方需要重点说明一下。其实bind、connect、read、write、close等事件是由传输层socket定义的函数,并不是由netty定义的
+	!!这个地方需要重点说明一下。其实bind、connect、read、write、close等连接事件是由传输层socket定义的协议,并不是由netty定义的。
+	实现一个传输层框架必须要实现这些接口。可类比httpClient等
+	
 ####	1、创建父子反应器线程组,赋值给启动器类 
 			boosGroup 用于 Accetpt 连接建立事件并分发请求,workerGroup 用于处理 I/O 读写事件和业务逻辑
+```java
 			EventLoopGroup boosGroup = new NioEventLoopGroup(config.getBossLoopGroupThreads());
         	EventLoopGroup workerGroup = new NioEventLoopGroup(config.getWorkerLoopGroupThreads());
         	ServerBootstrap bootstrap = new ServerBootstrap();
         	bootstrap.group(boosGroup, workerGroup);
+```
 ####	2、设置IO通道channel类型
 			bootstrap.channel(NioServerSocketChannel.class) //这里设置的父通道
 			实际上通道是成对存在的,会有父子通道分别用来处理客户端和服务端的请求
 ####	3、设置监听端口
+```java
 			b.localAddress(new InetSocketAddress(port));
+```
 ####	4、设置channel配置选项。可设置父子通道配置选项。分别为option、childOption方法
+```java
 			bootstrap.option(ChannelOption.SO_BACKLOG, config.getSoBacklog())
 			bootstrap.childOption(ChannelOption.SO_KEEPALIVE, config.isSoKeepalive())
+```
 ####	5、创建pipeline,配置handler处理器
 			pipeline为有序双向链表
 			new ChannelInitializer<Channel>
 ####	6、开启绑定服务器新连接的监听端口
 			服务端 b.bind().sync();
-			3、6步骤可以合并成一步 bootstrap.bind(new InetSocketAddress(InetAddress.getByName(config.getHost()), config.getPort())).sync;
+			
+```java
+		//3、6步骤可以合并成一步 
+		bootstrap.bind(new InetSocketAddress(InetAddress.getByName(config.getHost()), config.getPort())).sync;
+```
 			sync 表示阻塞当前线程,直到处理完成。
 			客户端建连连接 bootstrap.connect(host,port).sync()方法 host port 为要连接的父通道地址
 ####	7、阻塞,直到服务结束	
 			可以采取任意阻塞手段,
-			spring托管
-			甚至while(true)
-			channel.closeFuture().sync()
+			* spring托管
+			* 甚至while(true)
+			* Thread.sleep(Integer.MAX_SIZE)
+			* channel.closeFuture().sync()
 ####	8、进程结束时关闭反应器线程组 
-			workerLoopGroup.shutdownGracefully() bossLoopGroup.shutdownGracefully()
-
+```java
+			boss.shutdownGracefully().syncUninterruptibly();
+            worker.shutdownGracefully().syncUninterruptibly();
+```
 ##	selector
-	Netty 基于 Selector 对象实现 I/O 多路复用,通过 Selector 一个线程可以监听多个连接的 Channel 事件。
+	Netty 基于 Selector 对象实现 I/O 多路复用,通过 selector 一个线程可以监听多个连接的 Channel 事件。
 	当向一个 Selector 中注册 Channel 后,Selector 内部的机制就可以自动不断地查询(Select) 这些注册的 Channel 是否有已就绪的 I/O 事件(例如可读,可写,网络连接完成等),这样程序就可以很简单地使用一个线程高效地管理多个 Channel 。
-
 
 ##	channel 负责处理网络连接
 	每一个channel都代表一个网络连接,由它负责同对端进行网络通信,可以写入数据到对端,也可以从对端读取数据。
@@ -148,7 +165,7 @@
 		*8 	OioDatagramChannel：同步阻塞式UDP传输通道。
 		*9 	OioSctpChannel：同步阻塞式Sctp传输通道。
 		*10	OioSctpServerChannel：同步阻塞式Sctp服务器端监听通道。
-###	Channel接口为网络连接主接口 网络层实现了http、webSocket等多种处理机制
+###	Channel接口为网络连接主接口。
 		*1	当前网络连接的通道的状态(例如是否打开？是否已连接？)
 		*2	网络连接的配置参数 (例如接收缓冲区大小)
 		*3	提供异步的网络 I/O 操作(如建立连接,读写,绑定端口),异步调用意味着任何 I/O 调用都将立即返回,并且不保证在调用结束时所请求的 I/O 操作已完成。
@@ -158,8 +175,8 @@
 	唯一标识
 ###	parent 
 	父通道
-	ServerSocketChannel此属性为空
-	SocketChannel 为父通道引用
+	ServerSocketChannel 此属性为空。本身就是一个parent 
+	SocketChannel 为父通道引用,也就是对应的 ServerSocketChannel
 ###	pipeline
 	流水线。每一个channel都会拥有自己的流水线。
 ###	connect()
@@ -182,13 +199,35 @@
 	将数据写入到通道并立即写出
 
 ###	channel close disconnect deregister 方法对比
-	close销毁实例
-	disconnect只能销毁连接成功的实例
-	deregister
+	close 		销毁实例。推荐使用
+	disconnect  只能销毁连接成功的实例
+	deregister	注销
 
 ###	EmbeddedChannel 测试类
+	可以在测试类中启动一条流水线
+```java 
+	public void testPipelineInBound() {
+        ChannelInitializer i = new ChannelInitializer<EmbeddedChannel>() {
+            protected void initChannel(EmbeddedChannel ch) {
+                ch.pipeline().addLast(new SimpleInHandlerA());
+                ch.pipeline().addLast(new SimpleInHandlerB());
+                ch.pipeline().addLast(new SimpleInHandlerC());
 
-##	Handler
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(i);
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeInt(1);
+        //向通道写一个入站报文
+        channel.writeInbound(buf);
+        try {
+            Thread.sleep(Integer.MAX_VALUE);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+```
+##	Handler 控制器
 	在Reactor反应器经典模型中,反应器查询到IO事件后,分发到Handler业务处理器,由Handler完成IO操作和业务处理。
 	handler对IO的处理与channel处理对应,以达到解耦channel与IO结果的目的。
 	整个的IO处理操作环节包括:
@@ -222,16 +261,16 @@
 	*	disConnect 				断开服务器连接,此方法主要用于客户端,例如断开TCP连接
 	*	close 					关闭底层通道
 
-
 ###	channelRead重写问题
-	不调用基类channelRead方法会导致流水线截断
+	ChannelInboundHandler中 不调用基类channelRead方法会导致流水线截断。
 
 ##	ChannelHandlerContext
 	保存 Channel 相关的所有上下文信息,同时关联一个 ChannelHandler 对象。表示handler和pipeline之间的关联关系
 ###	功能
 	1、获取上下文所关联的Netty组件实例,如所关联的通道、所关联的流水线、上下文内部Handler业务处理器实例
-	2、进行入站、出站IO操作
+	2、进行入站、出站IO操作。
 ###	方法 和channel handler 定义方法基本一致 具体使用不是很理解
+
 	channel() 					获取channel
 	fireChannelRegistered()
 	fireChannelUnregistered()
@@ -250,14 +289,35 @@
 	每一个流水线节点为一个ChannelHandlerContext通道处理器上下文对象,每一个上下文中包裹了一个ChannelHandler通道处理器。
 	在ChannelHandler通道处理器的入站/出站处理方法中,Netty都会传递一个Context上下文实例作为实际参数。
 	通过Context实例的实参,在业务处理中,可以获取ChannelPipeline通道流水线的实例或者Channel通道的实例。
-###	三者读写IO上的区别(没理解)
+###	三者读写IO上的区别
+	IO操作(write、read)可以由channel 发起、可以由pipeline发起,可以由ChannelHandlerContext发起,也可以由handler发起。
 	通过Channel或ChannelPipeline的实例来调用这些方法,它们就会在整条流水线中传播。
 	然而,如果是通过ChannelHandlerContext通道处理器上下文进行调用,就只会从当前的节点开始执行Handler业务处理器,并传播到同类型处理器的下一站（节点）
-
+	*上面这段话不是很理解,看起来是影响范围不同。之后具体测试一下吧
 ## 流水线 pipeline ChannelInitializer
 	pipeline 将handler 整合在一起 用于处理channel事件 
 	在pipeline中 handler 对IO的处理有顺序定义 实际设计为一个双向链表
 	ChannelInitializer用于创建一条流水线
+```java
+	new ChannelInitializer<NioSocketChannel>() {
+       @Override
+       protected void initChannel(NioSocketChannel ch) {
+           ChannelPipeline pipeline = ch.pipeline();
+           if (sslCtx != null) {
+               pipeline.addFirst(sslCtx.newHandler(ch.alloc()));
+           }
+           //编解码控制器,之后会详细说明netty编解码。解决拆包等问题
+           pipeline.addLast(new HttpServerCodec());
+           pipeline.addLast(new HttpObjectAggregator(65536));
+           //跨域问题解决.netty作为一个IO框架,帮助我们解决了大部分应用层和传输层的协议控制
+           pipeline.addLast(new CorsHandler(corsConfig));
+           //空闲回收。解决连接的假死问题
+           pipeline.addLast(new IdleStateHandler(config.getHttpReaderIdleTimeSeconds(), config.getHttpWriterIdleTimeSeconds(), config.getHttpAllIdleTimeSeconds()));
+           pipeline.addLast(new HttpServerHandler(pojoEndpointServer, config, finalEventExecutorGroup));
+
+       }
+   });
+```
 	工作流程 
 		入站 正序执行 
 			1、	TCP传输层 :解码(ByteBuf) -decoder将入站的ByteBuf转成netty对象-> Polo(FullHttpRequest) 
@@ -267,16 +327,18 @@
 	channelRead()没有调用super.channelRead() 流水线将不会再像后传递
 ###	热插拔
 	动态地增加、删除流水线上的业务处理器Handler。包括但不仅限于以下方法
+```java
 	addFirst(EventExecutorGroup group, ChannelHandler... handlers)
 	addLast(ChannelHandler... handlers)
 	remove(ChannelHandler handler)
 	remove(String name)
+```
 ##	Future
 	继承并且扩展了Java Future对象
 	netty中Future添加了addListener、removeListener方式 支持添加对结果监听的处理
 	在Netty的网络编程中,网络连接通道的输入和输出处理都是异步进行的,都会返回一个ChannelFuture接口的实例。可以通过ChannelFuture添加异步回调的监听器
-	Future.syncUninterruptibly 不会被中断的sync
-	Future.sync 当前线程等待直接Future执行完毕。但是如果Future执行失败则会抛出失败原因
+	* Future.syncUninterruptibly 	不会被中断的sync
+	* Future.sync 					当前线程等待直接Future执行完毕。但是如果Future执行失败则会抛出失败原因
 ###	ChannelFuture、Future 异步通知和监听机制
 	在 Netty 中所有的 IO 操作都是异步的,不能立刻得知消息是否被正确处理。但是可以过一会等它执行完成或者直接注册一个监听,具体的实现就是通过 Future 和 ChannelFutures,他们可以注册一个监听,当操作执行成功或失败时监听会自动触发注册的监听事件。
 	常见有如下操作:
@@ -292,9 +354,9 @@
     boolean trySuccess();
     ChannelPromise setFailure(Throwable var1);
 ##	ByteBuf缓冲区
-	(注意内存耗尽的问题)
+	ByteBuf编程中,时刻注意内存的释放,注意内存耗尽的问题。byteBuf.release()
 ###	与Java NIO的ByteBuffer相比,ByteBuf的优势
-	* Pooling（池化,这点减少了内存复制和GC,提升了效率）
+	* Pooling（池化,这点减少了内存复制和GC,提升了效率）之后会详细说明
 	* 复合缓冲区类型,支持零复制
 	* 不需要调用flip()方法去切换读/写模式
 	* 扩展性好,例如StringBuffer
@@ -349,9 +411,10 @@
 	（2）Unpooled未池化的ByteBuf缓冲区，回收分为两种情况：如果是堆（Heap）结构缓冲，会被JVM的垃圾回收机制回收；如果是Direct类型，调用本地方法释放外部内存（unsafe.freeMemory）
 
 ###	Allocator分配器
+	前面说到ByteBuf有pool池化的特性。池化的ByteBuf可以避免重复创建和销毁ByteBuf对象。提升内存空间利用效率。
 	* Netty通过ByteBufAllocator分配器来创建缓冲区和分配内存空间。Netty提供了ByteBufAllocator的两种实现：PoolByteBufAllocator和UnpooledByteBufAllocator。
 	* 可以通过Java系统参数（System Property）的选项io.netty.allocator.type进行配置，配置时使用字符串值："unpooled"，"pooled"。
-	* 在Netty程序中设置启动器Bootstrap的时候，将PooledByteBufAllocator设置为默认的分配器
+	* 在Netty程序中设置启动器Bootstrap的时候，将PooledByteBufAllocator设置为默认的分配器。代码如下所示
 ```java
 	bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 ```
@@ -373,7 +436,7 @@
 
 ####	Jemalloc内存管理库
 	//todo待补充
-	在底层，Netty为我们干了所有“脏活、累活”！这主要是因为Netty用到了Java的Jemalloc内存管理库。
+	在底层，Netty为我们干了所有“脏活、累活”！这主要是因为Netty用到了Java的Jemalloc内存管理库。有兴趣的小伙伴可以了解一下
 
 ###	ByteBuf缓冲区的类型
 	根据内存的管理方不同，分为堆缓存区和直接缓存区，也就是HeapByteBuf和DirectByteBuf。另外，为了方便缓冲区进行组合，提供了一种组合缓存区。
@@ -416,7 +479,7 @@
 	Netty默认会在ChannelPipline通道流水线的最后添加一个TailHandler末尾处理器，它实现了默认的处理方法，在这些方法中会帮助完成ByteBuf内存释放的工作。
 	super.channelRead(ctx,msg);
 	在需要截断流水线的情况下,需要考虑手动释放或者SimpleChannelInboundHandler
-#####	byteBuf.release()
+
 #####	SimpleChannelInboundHandler
 	自动释放ByteBuf,业务处理需要调用channelRead0(ctx,msg)。实现请查看源码
 ```java
@@ -447,7 +510,6 @@
         return false;
     }
 ```
-
 ####	出站释放ByteBuf实例
 #####	HeadHandler自动释放
 	在出站处理流程中，申请分配到的ByteBuf主要是通过HeadHandler完成自动释放的。
@@ -455,8 +517,8 @@
 	在出站流水线最后(head)会来到HeadHandler,在数据输出完成后ByteBuf被释放。如果计数器为零,彻底释放。(这里有个问题啊,如果不为零就不释放了???那岂不是也有问题)
 
 ##	Decoder与Encoder解码器
-	将IO二进制传输 转化为Java Polo。这一层定义的是通道channel的数据编码格式。
-	编解码过程中需要解决半包、粘包、分包发送等问题
+	因为netty作为一个IO框架,所有收到的数据均为二进制数据。需要将IO二进制传输 转化为Java Polo。这一层定义的是通道channel的数据编码格式。
+	编解码过程中需要解决半包、粘包、分包发送等问题。
 
 ###	HttpServerCodec	
 	httpRequest
@@ -478,20 +540,28 @@
 	解决的思路大致为
 	netty的大多数编解码器为开发者解决了这个问题
 
-##	设置cookie
+#	实际问题解决
+##	response设置cookie
+```java	
 	res.headers().set(HttpHeaderNames.SET_COOKIE, new DefaultCookie("IP", "123456"));
-##	获取cookie
+```
+
+##	request获取cookie
+```java
 	HttpRequest request = (HttpRequest) e.getMessage();
 	String value = request.getHeader("Cookie");
 	System.out.println(value);
-##	netty没有实现session 需要自己实现
+```
+##	netty没有实现session 使用过程中如果需要绑定会话信息需要自己实现。可参考spring
 ##  跨域问题解决 这里简单记录下netty配置 详细原理和解决方案在Internet中记录
+```java
     //允许携带的header中属性 支持 * 通配符 ajax cookie跨域访问中 * 无法支持 需要显示指定可以携带哪些header信息
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type,X-Requested-With");
     //是否允许携带cookie
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
     //支持的跨域名访问 ajax cookie跨域访问中 * 无法支持 ORIGIN 属性只能设置 一个 需要服务端手动配置 白名单匹配
     res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-
+```
 ##	即时通讯与webSocket
-	即时通讯IM不一定要使用WS协议。TCP连接大多数情况下的性能更加优秀
+	即时通讯IM不一定要使用WS协议。TCP连接大多数情况下的性能更加优秀。但是传输层和应用层的问题需要自己解决。
+	目前很多即时通讯客户端并没有使用WS协议
