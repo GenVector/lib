@@ -1,13 +1,16 @@
 #	线程
 ##	三种线程实现方式
 	根据操作系统内核是否对线程可感知,可以把线程分为内核线程和用户线程。目前系统内核对内核线程做了轻量级封装后暴露给用户程序,称为轻量级进程
-	1、使用内核线程实现。Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1。程序线程实现依赖内核线程实现。
-	2、使用用户线程实现。用户线程指的是完全建立在用户空间的线程库上,系统内核不能感知线程存在的实现。用户程序自己封装了线程的实现
-	3、使用用户线程和轻量级进程混合实现。由CPU封装轻量级进程,然后用户进程,对应多个用户线程。
+	1、使用内核线程实现。
+		Windows与Linux JDK 实现的线程模型 用户线程 与内核线程 1:1。程序线程实现依赖内核线程实现。
+	2、使用用户线程实现。
+		用户线程指的是完全建立在用户空间的线程库上,系统内核不能感知线程存在的实现。用户程序自己封装了线程的实现
+	3、使用用户线程和轻量级进程混合实现。
+		由CPU封装轻量级进程（内核线程暴露接口）,然后用户进程再一次进行封装,对应多个用户线程。
 
 ##	线程分配方式
 	1、抢占式 目前Linux、windows等操作系统对线程的分配方式为抢占式
-	2、调度式
+	2、调度式。由系统内核统一统一线程调起、释放
 
 #	程序IO与内核IO
 	Linux定义了一切皆文件。然而在计算机程序中,我们可以毫不客气地说一切皆IO。无论是传输、交互、读写、还是处理。
@@ -17,6 +20,7 @@
 	所以同步等待IO事件的完成是一件很消耗的操作。在此背景下,探索新的IO方式才有存在的意义
 
 ##	IO读写模型
+	目前有四种IO。
 ###	1、BIO 同步阻塞IO
 	传统同步阻塞IO,不过多介绍
 ###	2、NIO 同步非阻塞IO
@@ -25,6 +29,7 @@
 	在高并发应用场景下,同步非阻塞IO也是不可用的。一般Web服务器不使用这种IO模型。这种IO模型一般很少直接使用。在Java的实际开发中,也不会涉及这种IO模型
 ###	3、IO Multiplexing IO多路复用 
 	由统一的选择器轮询IO事件,将就绪状态的事件分发给不同的事件处理器。依赖系统内核提供的接口实现。
+	JAVA NIO库、Guava、reactor反应器都是基于IO多路复用模型设计。是重点介绍和掌握的模型。
 		注册IO事件
 		注册IO处理事件
 		注册定时轮询任务
@@ -34,17 +39,22 @@
 
 #	Java NIO 
 	Java NIO不是传统意义上的NIO。指的是 Java new IO,对应的是 Java OIO(old IO)。
-	同样使用IO多路复用模型实现。设计思路大致相同,这里只做简单介绍
+	同样使用IO多路复用模型实现。设计思路大致相同,这里只做简单介绍。
 ##	核心对象 buffer selector channel
 ##	使用
-	线程回调 Runable -> Callable<T>
-	桥接 FutureTask<T>实现了 -> Future接口 用于执行callable任务 并且得到返回值
+	 
+###	线程回调 Runable -> Callable<T>
+###	桥接 FutureTask<T>
+	实现了 -> Future接口 用于执行callable任务 并且得到返回值
 	(1)判断并发任务是否执行完成。
 	(2)获取并发的任务完成后的结果。
 	(3)取消并发执行中的任务。
-####	FutureTask 主要方法 run() get() isDone() ....... 泛型类 T为线程执行的返回结果
+####	FutureTask 
+	主要方法 run() get() isDone() ....... 泛型类 T为线程执行的返回结果
+	用于监听和返回线程执行结果
 
-###	buffer是一个抽象类 一共有八种buffer子类 继承自buffer 分别为基本数据类型(不包括Boolean)和指向对象内存的MappedByteBuffer
+###	buffer
+	是一个抽象类 一共有八种buffer子类 继承自buffer 分别为基本数据类型(不包括Boolean)和指向对象内存的MappedByteBuffer
 		ByteBuffer
 		CharBuffer
 		DoubleBuffer
@@ -64,7 +74,9 @@
 ##	应用:Nginx Redis netty
 ##	网络服务程序发展史
 	1>OIO while(true)
+		阻塞进程、轮询是否有请求发生
 	2>OIO One Connection PerThread
+		每一个线程处理一个请求。
 	3>Reactor
 ##	核心对象
 	反应器模式由Reactor反应器线程、Handlers处理器两大角色组成：
@@ -84,6 +96,7 @@
 		只消费一次
 	reactor反应器模式
 		handler与selectKey IO事件为一对一
+		读写完全解耦
 
 #	netty框架相关
 	netty基于reactor反应器模式设计。
@@ -517,11 +530,30 @@
 	在出站流水线最后(head)会来到HeadHandler,在数据输出完成后ByteBuf被释放。如果计数器为零,彻底释放。(这里有个问题啊,如果不为零就不释放了???那岂不是也有问题)
 
 ##	Decoder与Encoder解码器
+	Netty从底层Java通道读到ByteBuf二进制数据，传入Netty通道的流水线，随后开始入站处理。
 	因为netty作为一个IO框架,所有收到的数据均为二进制数据。需要将IO二进制传输 转化为Java Polo。这一层定义的是通道channel的数据编码格式。
 	编解码过程中需要解决半包、粘包、分包发送等问题。
+	(在TCP中)ByteBuf可以直接转换成JSON或者其他JAVA POJO。并非必须和http扯上关系
 
 ###	HttpServerCodec	
-	httpRequest
+	继承自CombinedChannelDuplexHandler。强制将编码器和解码器放在同一个控制器中。编解码器可以捆绑共同使用
+	同时实现了Decoder与Encoder。实现了HttpMessage与ByteBuf 的转换
+```java
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+            int oldSize = out.size();
+            super.decode(ctx, buffer, out);
+            int size = out.size();
+            for (int i = oldSize; i < size; i++) {
+                Object obj = out.get(i);
+                if (obj instanceof HttpRequest) {
+                    queue.add(((HttpRequest) obj).method());
+                }
+            }
+        }
+    }
+```
+###	WebSocketFrameAggregator
 
 ###	netty WebSocketFrame
 	* BinaryWebSocketFrame 			发送二进制消息
